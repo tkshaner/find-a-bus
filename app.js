@@ -1,4 +1,4 @@
-const apiBase = "http://api.thebus.org";
+const apiBase = "https://api.thebus.org";
 
 const routeForm = document.getElementById("routeForm");
 const vehicleForm = document.getElementById("vehicleForm");
