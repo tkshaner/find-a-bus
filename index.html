@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Find A Bus</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__content">
+        <h1>TheBus Route & Vehicle Explorer</h1>
+        <p>
+          Discover Honolulu bus routes, live vehicle positions, and stop arrivals using
+          <a href="https://api.thebus.org" target="_blank" rel="noopener">TheBus API</a>.
+          Enter your API key and search parameters below to get started.
+        </p>
+        <label class="input-group" for="apiKey">
+          <span>API Key</span>
+          <input id="apiKey" type="text" autocomplete="off" placeholder="Enter your TheBus API key" />
+        </label>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel" aria-labelledby="routes-title">
+        <div class="panel__header">
+          <h2 id="routes-title">Find Routes</h2>
+          <p>Search for routes by number and optional headsign keyword.</p>
+        </div>
+        <form id="routeForm" class="form-grid">
+          <label class="input-group" for="routeNumber">
+            <span>Route Number</span>
+            <input id="routeNumber" name="route" type="text" placeholder="e.g. 2" required />
+          </label>
+          <label class="input-group" for="routeHeadsign">
+            <span>Headsign (optional)</span>
+            <input id="routeHeadsign" name="headsign" type="text" placeholder="e.g. HAWAII KAI" />
+          </label>
+          <button type="submit" class="btn">Search Routes</button>
+        </form>
+        <div id="routeResults" class="results" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="vehicle-title">
+        <div class="panel__header">
+          <h2 id="vehicle-title">Track a Vehicle</h2>
+          <p>Enter a bus number to view its latest position, route, and schedule adherence.</p>
+        </div>
+        <form id="vehicleForm" class="form-grid">
+          <label class="input-group" for="vehicleNumber">
+            <span>Vehicle Number</span>
+            <input id="vehicleNumber" name="num" type="text" placeholder="e.g. 249" required />
+          </label>
+          <button type="submit" class="btn">Get Vehicle Info</button>
+        </form>
+        <div id="vehicleResults" class="results" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="arrivals-title">
+        <div class="panel__header">
+          <h2 id="arrivals-title">Check Stop Arrivals</h2>
+          <p>See upcoming arrivals for a stop to plan your trip.</p>
+        </div>
+        <form id="arrivalsForm" class="form-grid">
+          <label class="input-group" for="stopNumber">
+            <span>Stop Number</span>
+            <input id="stopNumber" name="stop" type="text" placeholder="e.g. 1" required />
+          </label>
+          <button type="submit" class="btn">View Arrivals</button>
+        </form>
+        <div id="arrivalsResults" class="results" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="panel panel--info">
+        <h2>Usage Tips</h2>
+        <ul>
+          <li>Create a free API key at <a href="https://www.honolulutransit.org/" target="_blank" rel="noopener">TheBus developer site</a>.</li>
+          <li>The <code>headsign</code> filter on routes is currently limited, so try searching with only the route number first.</li>
+          <li>Vehicle latitude/longitude values can be plotted on a map app to see the precise location.</li>
+        </ul>
+      </section>
+    </main>
+
+    <template id="route-template">
+      <article class="card">
+        <h3>Route <span data-field="routeNum"></span></h3>
+        <dl>
+          <div><dt>Headsign</dt><dd data-field="headsign"></dd></div>
+          <div><dt>First Stop</dt><dd data-field="firstStop"></dd></div>
+          <div><dt>Shape ID</dt><dd data-field="shapeID"></dd></div>
+        </dl>
+      </article>
+    </template>
+
+    <template id="vehicle-template">
+      <article class="card">
+        <h3>Vehicle <span data-field="number"></span></h3>
+        <dl>
+          <div><dt>Route</dt><dd data-field="route_short_name"></dd></div>
+          <div><dt>Headsign</dt><dd data-field="headsign"></dd></div>
+          <div><dt>Adherence</dt><dd data-field="adherence"></dd></div>
+          <div><dt>Driver</dt><dd data-field="driver"></dd></div>
+          <div><dt>Last Update</dt><dd data-field="last_message"></dd></div>
+          <div><dt>Latitude</dt><dd data-field="latitude"></dd></div>
+          <div><dt>Longitude</dt><dd data-field="longitude"></dd></div>
+          <div><dt>Trip</dt><dd data-field="trip"></dd></div>
+        </dl>
+      </article>
+    </template>
+
+    <template id="arrival-template">
+      <article class="card">
+        <h3><span data-field="route"></span> &mdash; <span data-field="headsign"></span></h3>
+        <dl>
+          <div><dt>Scheduled</dt><dd data-field="stopTime"></dd></div>
+          <div><dt>Estimated</dt><dd data-field="estimated"></dd></div>
+          <div><dt>Vehicle</dt><dd data-field="vehicle"></dd></div>
+          <div><dt>Direction</dt><dd data-field="direction"></dd></div>
+          <div><dt>Status</dt><dd data-field="canceled"></dd></div>
+        </dl>
+      </article>
+    </template>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
