@@ -68,6 +68,57 @@ function renderCard(container, template, data) {
   container.append(card);
 }
 
+function createProxyUrl(url) {
+  const encoded = encodeURIComponent(url);
+  return `https://corsproxy.io/?${encoded}`;
+}
+
+async function fetchJson(url, { useProxy = false } = {}) {
+  const targetUrl = useProxy ? createProxyUrl(url) : url;
+  const headers = { Accept: "application/json" };
+
+  if (useProxy) {
+    headers["X-Requested-With"] = "find-a-bus";
+  }
+
+  const response = await fetch(targetUrl, { headers });
+
+  if (!response.ok) {
+    const error = new Error(`Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
+  }
+
+  const body = await response.text();
+
+  if (!body) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch (parseError) {
+    parseError.name = "JsonParseError";
+    throw parseError;
+  }
+}
+
+function shouldRetryWithProxy(error) {
+  if (!error) {
+    return false;
+  }
+
+  if (error.name === "JsonParseError") {
+    return true;
+  }
+
+  if (typeof TypeError !== "undefined" && error instanceof TypeError) {
+    return true;
+  }
+
+  return false;
+}
+
 async function fetchFromApi(path, params = {}) {
   const apiKey = apiKeyInput.value.trim();
   if (!apiKey) {
@@ -84,18 +135,31 @@ async function fetchFromApi(path, params = {}) {
   const url = new URL(path, apiBase);
   url.search = searchParams.toString();
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`);
+  try {
+    const data = await fetchJson(url.toString());
+    if (data.errorMessage) {
+      throw new Error(data.errorMessage);
+    }
+    return data;
+  } catch (error) {
+    if (!shouldRetryWithProxy(error)) {
+      throw error;
+    }
+
+    try {
+      const data = await fetchJson(url.toString(), { useProxy: true });
+      if (data.errorMessage) {
+        throw new Error(data.errorMessage);
+      }
+      return data;
+    } catch (proxyError) {
+      if (proxyError.name === "JsonParseError") {
+        throw new Error("Received an unexpected response from TheBus API.");
+      }
+
+      throw proxyError;
+    }
   }
-
-  const data = await response.json();
-
-  if (data.errorMessage) {
-    throw new Error(data.errorMessage);
-  }
-
-  return data;
 }
 
 routeForm?.addEventListener("submit", async (event) => {
