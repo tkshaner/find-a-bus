@@ -74,8 +74,15 @@ async function fetchFromApi(path, params = {}) {
     throw new Error("Please enter your TheBus API key to continue.");
   }
 
-  const searchParams = new URLSearchParams({ key: apiKey, ...params });
-  const url = `${apiBase}${path}?${searchParams.toString()}`;
+  const searchParams = new URLSearchParams({ key: apiKey, json: "1" });
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      searchParams.set(key, value);
+    }
+  });
+
+  const url = new URL(path, apiBase);
+  url.search = searchParams.toString();
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -100,7 +107,7 @@ routeForm?.addEventListener("submit", async (event) => {
   renderLoading(routeResults);
 
   try {
-    const data = await fetchFromApi("/routeJSON", {
+    const data = await fetchFromApi("/route/", {
       route,
       ...(headsign ? { headsign } : {}),
     });
@@ -127,7 +134,7 @@ vehicleForm?.addEventListener("submit", async (event) => {
   renderLoading(vehicleResults);
 
   try {
-    const data = await fetchFromApi("/vehicle", { num });
+    const data = await fetchFromApi("/vehicle/", { num });
     const vehicles = data.vehicles ?? [];
 
     if (vehicles.length === 0) {
@@ -152,7 +159,7 @@ arrivalsForm?.addEventListener("submit", async (event) => {
   renderLoading(arrivalsResults);
 
   try {
-    const data = await fetchFromApi("/arrivalsJSON", { stop });
+    const data = await fetchFromApi("/arrivals/", { stop });
     const arrivals = data.arrivals ?? [];
 
     if (arrivals.length === 0) {
