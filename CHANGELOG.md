@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-10-28
+
+### Added
+- **All Bus Stops on Map**: Complete visualization of 3,825 TheBus stops
+  - Interactive map showing every bus stop across Oahu
+  - Click any stop to see name, code, and check arrivals
+  - Marker clustering for performance (Leaflet.markercluster)
+  - Toggle button to show/hide stops map
+  - 364 KB stops.json file with essential stop data
+- **Find Nearby Stops**: Geolocation-based stop discovery
+  - Uses browser geolocation to find user position
+  - Shows 10 nearest stops with distances (km)
+  - Highlights user location on map with red marker
+  - Auto-zooms to show user and nearby stops
+- **Direct Stop → Arrivals Integration**
+  - "Check Arrivals" button in stop popups
+  - Auto-populates arrivals form with stop number
+  - Smooth scroll to arrivals section
+  - Seamless workflow for checking buses
+- **GTFS Data Analysis**: Comprehensive documentation
+  - GTFS_ANALYSIS.md with complete dataset review
+  - Analysis of all 9 GTFS files
+  - Feature recommendations and roadmap
+  - Implementation strategies for future enhancements
+
+### Technical
+- Converted GTFS stops.txt to optimized JSON format
+- Leaflet.markercluster plugin integration
+- Haversine formula for distance calculations
+- Lazy-loaded stops data (only fetched when needed)
+- Custom stop markers (12px white/blue circles)
+- Clustering radius: 50px for optimal grouping
+
+### Data
+- stops.json: 3,825 stops, 364 KB
+- Fields: id, code, name, latitude, longitude
+- GTFS feed in gtfs/ directory (excluded from repo)
+
+### User Experience
+- 500px responsive map for stops exploration
+- Performance-optimized clustering (handles 3,825 markers)
+- Visual feedback with loading messages
+- Error handling for geolocation failures
+- Touch-friendly on mobile devices
+
 ## [1.2.0] - 2025-10-28
 
 ### Added
