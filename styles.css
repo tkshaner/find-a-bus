@@ -194,14 +194,59 @@ dl {
 }
 
 .panel--info {
-  background: var(--color-surface-info);
-  border-color: var(--color-border-strong);
-  color: #0b1f57;
+  background: rgba(219, 234, 254, 0.95);
+  border-color: rgba(37, 99, 235, 0.45);
+  color: #102a68;
+}
+
+.panel--info h2 {
+  color: #1e3a8a;
+}
+
+.panel--info ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: inherit;
+  font-weight: 500;
 }
 
 .panel--info a {
-  color: inherit;
-  font-weight: 600;
+  color: #1d4ed8;
+  text-decoration-color: rgba(29, 78, 216, 0.55);
+}
+
+.panel--info a:hover,
+.panel--info a:focus-visible {
+  color: #1e40af;
+  text-decoration-color: rgba(30, 64, 175, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  .panel--info {
+    background: rgba(30, 58, 138, 0.55);
+    border-color: rgba(96, 165, 250, 0.6);
+    color: #e0e7ff;
+  }
+
+  .panel--info h2 {
+    color: #c7d2fe;
+  }
+
+  .panel--info ul {
+    color: inherit;
+    font-weight: 500;
+  }
+
+  .panel--info a {
+    color: #93c5fd;
+    text-decoration-color: rgba(147, 197, 253, 0.55);
+  }
+
+  .panel--info a:hover,
+  .panel--info a:focus-visible {
+    color: #bfdbfe;
+    text-decoration-color: rgba(191, 219, 254, 0.7);
+  }
 }
 
 .empty-state {
