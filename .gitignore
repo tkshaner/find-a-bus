@@ -18,3 +18,8 @@ Thumbs.db
 
 # Test files (optional - comment out if you want to commit test-api.html)
 # test-api.html
+
+*.txt
+
+# GTFS data directory
+gtfs/
