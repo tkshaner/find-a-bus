@@ -194,14 +194,64 @@ dl {
 }
 
 .panel--info {
-  background: var(--color-surface-info);
-  border-color: var(--color-border-strong);
-  color: #0b1f57;
+  background: #dbeafe;
+  border-color: #1d4ed8;
+  color: #0f172a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.panel--info h2 {
+  color: #0f172a;
+}
+
+.panel--info ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: inherit;
+  font-weight: 500;
+}
+
+.panel--info li + li {
+  margin-top: 0.6rem;
 }
 
 .panel--info a {
-  color: inherit;
-  font-weight: 600;
+  color: #1e3a8a;
+  text-decoration-color: rgba(30, 64, 175, 0.55);
+}
+
+.panel--info a:hover,
+.panel--info a:focus-visible {
+  color: #1d4ed8;
+  text-decoration-color: rgba(29, 78, 216, 0.75);
+}
+
+@media (prefers-color-scheme: dark) {
+  .panel--info {
+    background: rgba(30, 64, 175, 0.85);
+    border-color: rgba(147, 197, 253, 0.75);
+    color: #e2e8f0;
+    box-shadow: inset 0 1px 0 rgba(148, 197, 253, 0.25);
+  }
+
+  .panel--info h2 {
+    color: #f8fafc;
+  }
+
+  .panel--info ul {
+    color: inherit;
+  }
+
+  .panel--info a {
+    color: #bfdbfe;
+    text-decoration-color: rgba(191, 219, 254, 0.6);
+  }
+
+  .panel--info a:hover,
+  .panel--info a:focus-visible {
+    color: #e0f2fe;
+    text-decoration-color: rgba(224, 242, 254, 0.8);
+  }
 }
 
 .empty-state {
