@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-10-28
+
+### Fixed
+- **Critical**: Vehicle tracking endpoint now working correctly
+  - TheBus API `/vehicle` endpoint returns XML, not JSON
+  - Added XML parser (`parseVehicleXML`) to handle vehicle responses
+  - Updated `fetchFromApi` to detect vehicle endpoint and parse XML
+  - Vehicle data now correctly displayed in the UI
+
+### Added
+- `.gitignore` file for common development artifacts (OS files, editor files, logs)
+
+### Technical
+- Implemented DOMParser-based XML parsing for vehicle data
+- Maintains consistent data structure across all endpoints
+- Special handling for "null" string values in XML responses
+
 ## [1.1.0] - 2025-10-28
 
 ### Added
