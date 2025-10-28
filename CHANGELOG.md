@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-10-28
+
+### Added
+- **Map Visualization**: Interactive Leaflet map for vehicle tracking
+  - Real-time bus location display on OpenStreetMap
+  - Custom bus markers with gradient styling and emoji icons
+  - Click markers to see detailed popup with vehicle info
+  - Auto-zoom to fit all vehicles in view
+  - Responsive design (400px desktop, 300px mobile)
+  - Dark mode compatible styling
+- **Enhanced Adherence Display**: Human-readable schedule adherence
+  - Converts seconds to minutes ("5 min late" instead of "300")
+  - Shows "On time", "X min early", or "X min late"
+  - Applied to both vehicle cards and map popups
+
+### Technical
+- Integrated Leaflet.js 1.9.4 via CDN
+- OpenStreetMap tile layer for base maps
+- Custom divIcon implementation for bus markers
+- Lazy-loaded map initialization
+- Marker management system (add, clear, auto-fit)
+
+### User Experience
+- Visual location tracking instead of just coordinates
+- Intuitive map interface for finding buses
+- Touch-friendly markers on mobile
+- Map auto-hides when no valid coordinates
+
 ## [1.1.2] - 2025-10-28
 
 ### Fixed
