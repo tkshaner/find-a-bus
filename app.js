@@ -8,6 +8,9 @@ const routeResults = document.getElementById("routeResults");
 const vehicleResults = document.getElementById("vehicleResults");
 const arrivalsResults = document.getElementById("arrivalsResults");
 
+const vehicleMapContainer = document.getElementById("vehicleMap");
+const vehicleMapCanvas = document.getElementById("vehicleMapCanvas");
+
 const apiKeyInput = document.getElementById("apiKey");
 const rememberKeyCheckbox = document.getElementById("rememberKey");
 const toggleKeyVisibilityBtn = document.getElementById("toggleKeyVisibility");
@@ -181,6 +184,123 @@ const templates = {
   arrival: document.getElementById("arrival-template"),
 };
 
+// Map instance for vehicle tracking
+let vehicleMap = null;
+let vehicleMarkers = [];
+
+// Initialize Leaflet map for vehicle tracking
+function initVehicleMap() {
+  if (!vehicleMap && vehicleMapCanvas) {
+    // Center on Honolulu
+    vehicleMap = L.map(vehicleMapCanvas).setView([21.3099, -157.8581], 12);
+
+    // Add OpenStreetMap tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(vehicleMap);
+  }
+  return vehicleMap;
+}
+
+// Clear all vehicle markers from map
+function clearVehicleMarkers() {
+  vehicleMarkers.forEach(marker => marker.remove());
+  vehicleMarkers = [];
+}
+
+// Add vehicle marker to map
+function addVehicleMarker(vehicle) {
+  const lat = parseFloat(vehicle.latitude);
+  const lon = parseFloat(vehicle.longitude);
+
+  if (isNaN(lat) || isNaN(lon)) {
+    return null;
+  }
+
+  // Create custom popup content
+  const popupContent = `
+    <div style="min-width: 200px;">
+      <h3 style="margin: 0 0 8px 0; color: var(--color-primary);">Bus ${vehicle.number || 'Unknown'}</h3>
+      <dl style="margin: 0; display: grid; gap: 4px; font-size: 0.9em;">
+        ${vehicle.route_short_name ? `<div><dt style="font-weight: 600;">Route:</dt><dd style="margin: 0;">${vehicle.route_short_name}</dd></div>` : ''}
+        ${vehicle.headsign ? `<div><dt style="font-weight: 600;">Headsign:</dt><dd style="margin: 0;">${vehicle.headsign}</dd></div>` : ''}
+        ${vehicle.adherence ? `<div><dt style="font-weight: 600;">Adherence:</dt><dd style="margin: 0;">${formatAdherence(vehicle.adherence)}</dd></div>` : ''}
+        ${vehicle.last_message ? `<div><dt style="font-weight: 600;">Last Update:</dt><dd style="margin: 0;">${vehicle.last_message}</dd></div>` : ''}
+      </dl>
+    </div>
+  `;
+
+  // Create custom icon based on route
+  const busIcon = L.divIcon({
+    className: 'custom-bus-icon',
+    html: `<div style="
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: white;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+      border: 3px solid white;
+    ">🚌</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18]
+  });
+
+  const marker = L.marker([lat, lon], { icon: busIcon })
+    .addTo(vehicleMap)
+    .bindPopup(popupContent);
+
+  vehicleMarkers.push(marker);
+
+  return marker;
+}
+
+// Format adherence in human-readable way
+function formatAdherence(adherence) {
+  const seconds = parseInt(adherence);
+  if (isNaN(seconds)) return adherence;
+
+  const minutes = Math.round(seconds / 60);
+
+  if (minutes === 0) return "On time";
+  if (minutes > 0) return `${minutes} min late`;
+  return `${Math.abs(minutes)} min early`;
+}
+
+// Show map and fit bounds to markers
+function showVehicleMap() {
+  if (vehicleMapContainer) {
+    vehicleMapContainer.style.display = 'block';
+
+    // Invalidate size to fix rendering issues
+    setTimeout(() => {
+      if (vehicleMap) {
+        vehicleMap.invalidateSize();
+
+        // Fit map to show all markers
+        if (vehicleMarkers.length > 0) {
+          const group = L.featureGroup(vehicleMarkers);
+          vehicleMap.fitBounds(group.getBounds().pad(0.1));
+        }
+      }
+    }, 100);
+  }
+}
+
+// Hide vehicle map
+function hideVehicleMap() {
+  if (vehicleMapContainer) {
+    vehicleMapContainer.style.display = 'none';
+  }
+}
+
 function renderLoading(container) {
   container.replaceChildren();
   const spinner = document.createElement("div");
@@ -207,6 +327,9 @@ function renderCard(container, template, data) {
     }
     if (key === "canceled") {
       value = data[key] ? "Canceled" : "On schedule";
+    }
+    if (key === "adherence" && value) {
+      value = formatAdherence(value);
     }
     if (value === undefined || value === null || value === "") {
       value = "—";
@@ -413,6 +536,7 @@ vehicleForm?.addEventListener("submit", async (event) => {
   const num = formData.get("num");
 
   renderLoading(vehicleResults);
+  hideVehicleMap();
 
   try {
     // Note: /vehicle endpoint returns XML, not JSON
@@ -424,12 +548,28 @@ vehicleForm?.addEventListener("submit", async (event) => {
       return;
     }
 
+    // Initialize map and clear previous markers
+    initVehicleMap();
+    clearVehicleMarkers();
+
+    // Render vehicle cards
     vehicleResults.replaceChildren();
     vehicles.forEach(({ vehicle }) => {
       renderCard(vehicleResults, templates.vehicle, vehicle ?? {});
+
+      // Add vehicle to map if coordinates are valid
+      if (vehicle && vehicle.latitude && vehicle.longitude) {
+        addVehicleMarker(vehicle);
+      }
     });
+
+    // Show map if we have any markers
+    if (vehicleMarkers.length > 0) {
+      showVehicleMap();
+    }
   } catch (error) {
     renderMessage(vehicleResults, error.message, "error-state");
+    hideVehicleMap();
   }
 });
 

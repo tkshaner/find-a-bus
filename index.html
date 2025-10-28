@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Find A Bus</title>
     <link rel="stylesheet" href="styles.css" />
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""/>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""></script>
   </head>
   <body>
     <header class="hero">
@@ -77,6 +85,9 @@
           </label>
           <button type="submit" class="btn">Get Vehicle Info</button>
         </form>
+        <div id="vehicleMap" class="map-container" style="display: none;">
+          <div id="vehicleMapCanvas" class="map-canvas"></div>
+        </div>
         <div id="vehicleResults" class="results" role="status" aria-live="polite"></div>
       </section>
 
