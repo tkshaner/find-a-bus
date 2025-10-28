@@ -340,11 +340,29 @@ async function fetchFromApi(path, params = {}) {
       return data;
     }
   } catch (error) {
-    // Retry with proxy for JSON endpoints only
-    if (isVehicleEndpoint || !shouldRetryWithProxy(error)) {
+    // Retry with proxy for both XML and JSON endpoints on CORS/network errors
+    if (!isVehicleEndpoint && !shouldRetryWithProxy(error)) {
       throw error;
     }
 
+    // For vehicle endpoint, retry with proxy on any error (likely CORS)
+    if (isVehicleEndpoint) {
+      try {
+        const proxyUrl = createProxyUrl(url.toString());
+        const response = await fetch(proxyUrl, {
+          headers: { "X-Requested-With": "find-a-bus" }
+        });
+        if (!response.ok) {
+          throw new Error(`Request failed via proxy (${response.status})`);
+        }
+        const xmlText = await response.text();
+        return parseVehicleXML(xmlText);
+      } catch (proxyError) {
+        throw new Error("Unable to fetch vehicle data. Please try again later.");
+      }
+    }
+
+    // Retry JSON endpoints with proxy
     try {
       const data = await fetchJson(url.toString(), { useProxy: true });
       if (data.errorMessage) {
