@@ -2,6 +2,8 @@
 
 An interactive single-page site for exploring Honolulu's TheBus routes, vehicles, and stop arrivals. The interface uses the public TheBus API to surface the latest transit information.
 
+> 📋 See [CHANGELOG.md](CHANGELOG.md) for a complete history of changes and releases.
+
 ## Getting started
 
 ### 1. Launch the page
@@ -45,10 +47,11 @@ Because the project is a static site, you can deploy it to GitHub Pages without 
 
 ```
 .
-├── app.js        # Fetches data from the API and renders results
-├── index.html    # Layout and form controls for the interface
-├── styles.css    # Styling for the interface, cards, and states
-└── README.md
+├── app.js         # Fetches data from the API and renders results
+├── index.html     # Layout and form controls for the interface
+├── styles.css     # Styling for the interface, cards, and states
+├── README.md      # Project documentation
+└── CHANGELOG.md   # Development log and version history
 ```
 
 ## Security considerations
