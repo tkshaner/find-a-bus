@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2025-10-28
+
+### Fixed
+- **CORS**: Vehicle endpoint now uses CORS proxy fallback when blocked by browser
+  - TheBus API `/vehicle` endpoint missing CORS headers for GitHub Pages
+  - Automatic retry with corsproxy.io when direct request fails
+  - Provides graceful error handling if both attempts fail
+
+### Technical
+- Extended proxy fallback mechanism to handle XML responses
+- Consistent error handling across all API endpoints
+
 ## [1.1.1] - 2025-10-28
 
 ### Fixed
