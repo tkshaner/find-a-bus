@@ -432,3 +432,28 @@ footer {
     background: rgba(30, 41, 59, 0.95);
   }
 }
+
+/* Map Controls */
+.map-controls {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.btn-secondary:hover {
+  box-shadow: 0 14px 28px rgba(100, 116, 139, 0.28);
+}
+
+.info-message {
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: var(--color-text);
+}

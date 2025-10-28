@@ -11,6 +11,12 @@ const arrivalsResults = document.getElementById("arrivalsResults");
 const vehicleMapContainer = document.getElementById("vehicleMap");
 const vehicleMapCanvas = document.getElementById("vehicleMapCanvas");
 
+const stopsMapContainer = document.getElementById("stopsMap");
+const stopsMapCanvas = document.getElementById("stopsMapCanvas");
+const toggleStopsBtn = document.getElementById("toggleStopsBtn");
+const findNearbyBtn = document.getElementById("findNearbyBtn");
+const stopsMessage = document.getElementById("stopsMessage");
+
 const apiKeyInput = document.getElementById("apiKey");
 const rememberKeyCheckbox = document.getElementById("rememberKey");
 const toggleKeyVisibilityBtn = document.getElementById("toggleKeyVisibility");
@@ -299,6 +305,298 @@ function hideVehicleMap() {
   if (vehicleMapContainer) {
     vehicleMapContainer.style.display = 'none';
   }
+}
+
+// ============================================================================
+// STOPS MAP FUNCTIONALITY
+// ============================================================================
+
+let stopsMap = null;
+let stopsData = null;
+let stopsClusterGroup = null;
+let stopsLoaded = false;
+
+// Initialize stops map
+function initStopsMap() {
+  if (!stopsMap && stopsMapCanvas) {
+    // Center on Honolulu
+    stopsMap = L.map(stopsMapCanvas).setView([21.3099, -157.8581], 11);
+
+    // Add OpenStreetMap tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(stopsMap);
+
+    // Initialize marker cluster group
+    stopsClusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true
+    });
+
+    stopsMap.addLayer(stopsClusterGroup);
+  }
+  return stopsMap;
+}
+
+// Load stops data from JSON file
+async function loadStopsData() {
+  if (stopsData) {
+    return stopsData; // Already loaded
+  }
+
+  try {
+    showStopsMessage('Loading 3,825 bus stops...');
+    const response = await fetch('stops.json');
+    if (!response.ok) {
+      throw new Error('Failed to load stops data');
+    }
+    stopsData = await response.json();
+    showStopsMessage(`Loaded ${stopsData.length} stops successfully!`);
+    setTimeout(() => hideStopsMessage(), 2000);
+    return stopsData;
+  } catch (error) {
+    showStopsMessage('Error loading stops: ' + error.message, true);
+    throw error;
+  }
+}
+
+// Add stop markers to map
+function addStopsToMap(stops) {
+  if (!stopsClusterGroup) return;
+
+  // Clear existing markers
+  stopsClusterGroup.clearLayers();
+
+  stops.forEach(stop => {
+    // Create custom stop icon
+    const stopIcon = L.divIcon({
+      className: 'custom-stop-icon',
+      html: `<div style="
+        background: white;
+        border: 2px solid #2563eb;
+        border-radius: 50%;
+        width: 12px;
+        height: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      "></div>`,
+      iconSize: [12, 12],
+      iconAnchor: [6, 6],
+      popupAnchor: [0, -6]
+    });
+
+    // Create popup content
+    const popupContent = `
+      <div style="min-width: 200px;">
+        <h3 style="margin: 0 0 8px 0; color: var(--color-primary); font-size: 1em;">
+          Stop ${stop.code}
+        </h3>
+        <p style="margin: 0 0 8px 0; font-weight: 600;">
+          ${stop.name}
+        </p>
+        <button
+          onclick="checkStopArrivals('${stop.id}')"
+          style="
+            width: 100%;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9em;
+          "
+        >
+          Check Arrivals
+        </button>
+      </div>
+    `;
+
+    const marker = L.marker([stop.lat, stop.lon], { icon: stopIcon })
+      .bindPopup(popupContent);
+
+    stopsClusterGroup.addLayer(marker);
+  });
+
+  stopsLoaded = true;
+}
+
+// Show message in stops section
+function showStopsMessage(message, isError = false) {
+  if (stopsMessage) {
+    stopsMessage.textContent = message;
+    stopsMessage.style.display = 'block';
+    if (isError) {
+      stopsMessage.style.background = 'rgba(220, 38, 38, 0.1)';
+      stopsMessage.style.borderColor = 'rgba(220, 38, 38, 0.3)';
+      stopsMessage.style.color = '#991b1b';
+    } else {
+      stopsMessage.style.background = 'rgba(59, 130, 246, 0.1)';
+      stopsMessage.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+      stopsMessage.style.color = 'var(--color-text)';
+    }
+  }
+}
+
+// Hide message in stops section
+function hideStopsMessage() {
+  if (stopsMessage) {
+    stopsMessage.style.display = 'none';
+  }
+}
+
+// Toggle stops map visibility
+async function toggleStopsMap() {
+  if (!stopsMapContainer) return;
+
+  const isVisible = stopsMapContainer.style.display !== 'none';
+
+  if (isVisible) {
+    // Hide map
+    stopsMapContainer.style.display = 'none';
+    toggleStopsBtn.textContent = 'Show All Stops on Map';
+    findNearbyBtn.style.display = 'none';
+  } else {
+    // Show map
+    stopsMapContainer.style.display = 'block';
+    toggleStopsBtn.textContent = 'Hide Stops Map';
+    findNearbyBtn.style.display = 'inline-block';
+
+    // Initialize map if needed
+    initStopsMap();
+
+    // Load and display stops if not already loaded
+    if (!stopsLoaded) {
+      try {
+        const stops = await loadStopsData();
+        addStopsToMap(stops);
+      } catch (error) {
+        console.error('Failed to load stops:', error);
+      }
+    }
+
+    // Fix map rendering issues
+    setTimeout(() => {
+      if (stopsMap) {
+        stopsMap.invalidateSize();
+      }
+    }, 100);
+  }
+}
+
+// Global function to check stop arrivals (called from popup button)
+window.checkStopArrivals = function(stopId) {
+  // Scroll to arrivals section
+  const arrivalsSection = document.querySelector('#arrivals-title').closest('.panel');
+  arrivalsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Fill in stop number
+  const stopInput = document.getElementById('stopNumber');
+  if (stopInput) {
+    stopInput.value = stopId;
+    // Trigger the form submission
+    setTimeout(() => {
+      const arrivalsForm = document.getElementById('arrivalsForm');
+      if (arrivalsForm) {
+        arrivalsForm.requestSubmit();
+      }
+    }, 500);
+  }
+};
+
+// Find nearby stops using geolocation
+function findNearbyStops() {
+  if (!navigator.geolocation) {
+    showStopsMessage('Geolocation is not supported by your browser', true);
+    return;
+  }
+
+  showStopsMessage('Getting your location...');
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const userLat = position.coords.latitude;
+      const userLon = position.coords.longitude;
+
+      // Load stops if not loaded
+      if (!stopsData) {
+        await loadStopsData();
+      }
+
+      // Calculate distances and find nearest stops
+      const stopsWithDistance = stopsData.map(stop => {
+        const distance = calculateDistance(userLat, userLon, stop.lat, stop.lon);
+        return { ...stop, distance };
+      });
+
+      // Sort by distance and get top 10
+      const nearbyStops = stopsWithDistance
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 10);
+
+      // Add user location marker
+      if (stopsMap) {
+        const userIcon = L.divIcon({
+          className: 'user-location-icon',
+          html: `<div style="
+            background: #ef4444;
+            border: 3px solid white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+          "></div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+
+        L.marker([userLat, userLon], { icon: userIcon })
+          .addTo(stopsMap)
+          .bindPopup('<strong>You are here</strong>')
+          .openPopup();
+
+        // Zoom to show user and nearby stops
+        const bounds = L.latLngBounds([[userLat, userLon]]);
+        nearbyStops.forEach(stop => bounds.extend([stop.lat, stop.lon]));
+        stopsMap.fitBounds(bounds.pad(0.1));
+      }
+
+      showStopsMessage(`Found ${nearbyStops.length} stops within ${nearbyStops[0].distance.toFixed(2)} - ${nearbyStops[nearbyStops.length - 1].distance.toFixed(2)} km`);
+      setTimeout(() => hideStopsMessage(), 3000);
+    },
+    (error) => {
+      showStopsMessage('Unable to get your location: ' + error.message, true);
+    }
+  );
+}
+
+// Calculate distance between two coordinates (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function toRad(degrees) {
+  return degrees * (Math.PI / 180);
+}
+
+// Event listeners for stops map
+if (toggleStopsBtn) {
+  toggleStopsBtn.addEventListener('click', toggleStopsMap);
+}
+
+if (findNearbyBtn) {
+  findNearbyBtn.addEventListener('click', findNearbyStops);
 }
 
 function renderLoading(container) {
