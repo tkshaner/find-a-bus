@@ -15,10 +15,33 @@
           <a href="https://api.thebus.org" target="_blank" rel="noopener">TheBus API</a>.
           Enter your API key and search parameters below to get started.
         </p>
-        <label class="input-group" for="apiKey">
-          <span>API Key</span>
-          <input id="apiKey" type="text" autocomplete="off" placeholder="Enter your TheBus API key" />
-        </label>
+
+        <div class="security-notice" role="alert">
+          <strong>⚠️ Security Notice:</strong> Your API key is stored in your browser. By default, it's cleared when you close the tab.
+          Never use production or paid API keys with this tool.
+          <a href="https://www.honolulutransit.org/" target="_blank" rel="noopener">Get a free developer key</a>.
+        </div>
+
+        <div class="api-key-container">
+          <label class="input-group" for="apiKey">
+            <span>API Key</span>
+            <div class="input-with-controls">
+              <input id="apiKey" type="password" autocomplete="off" placeholder="Enter your TheBus API key" aria-describedby="key-help" />
+              <button type="button" id="toggleKeyVisibility" class="btn-icon" aria-label="Toggle API key visibility" title="Show/Hide key">
+                <span class="icon-eye" aria-hidden="true">👁️</span>
+              </button>
+              <button type="button" id="clearKey" class="btn-icon" aria-label="Clear API key" title="Clear key">
+                <span class="icon-clear" aria-hidden="true">✕</span>
+              </button>
+            </div>
+          </label>
+          <small id="key-help" class="help-text">Your key is stored temporarily in this browser session</small>
+
+          <label class="checkbox-group">
+            <input type="checkbox" id="rememberKey" />
+            <span>Remember my key (stores permanently in browser)</span>
+          </label>
+        </div>
       </div>
     </header>
 

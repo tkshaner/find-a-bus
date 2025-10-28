@@ -9,21 +9,170 @@ const vehicleResults = document.getElementById("vehicleResults");
 const arrivalsResults = document.getElementById("arrivalsResults");
 
 const apiKeyInput = document.getElementById("apiKey");
+const rememberKeyCheckbox = document.getElementById("rememberKey");
+const toggleKeyVisibilityBtn = document.getElementById("toggleKeyVisibility");
+const clearKeyBtn = document.getElementById("clearKey");
+const keyHelpText = document.getElementById("key-help");
 
 const storageKey = "thebus-api-key";
+const rememberKeyStorageKey = "thebus-remember-key";
 
-let storage;
-try {
-  storage = window.localStorage;
-} catch (error) {
-  storage = undefined;
+// Storage abstraction - use sessionStorage by default, localStorage if "remember" is checked
+function getStorage() {
+  const remember = getRememberPreference();
+  try {
+    return remember ? window.localStorage : window.sessionStorage;
+  } catch (error) {
+    return undefined;
+  }
 }
 
-if (apiKeyInput && storage) {
-  apiKeyInput.value = storage.getItem(storageKey) ?? "";
+function getRememberPreference() {
+  try {
+    return window.localStorage.getItem(rememberKeyStorageKey) === "true";
+  } catch (error) {
+    return false;
+  }
+}
+
+function setRememberPreference(remember) {
+  try {
+    if (remember) {
+      window.localStorage.setItem(rememberKeyStorageKey, "true");
+    } else {
+      window.localStorage.removeItem(rememberKeyStorageKey);
+    }
+  } catch (error) {
+    // Silently fail if localStorage is disabled
+  }
+}
+
+// Validate API key format (basic validation)
+function validateApiKey(key) {
+  if (!key || key.trim().length === 0) {
+    return { valid: false, message: "API key is required" };
+  }
+
+  const trimmedKey = key.trim();
+
+  // Basic validation: check for reasonable length and alphanumeric characters
+  if (trimmedKey.length < 8) {
+    return { valid: false, message: "API key appears too short" };
+  }
+
+  if (trimmedKey.length > 128) {
+    return { valid: false, message: "API key appears too long" };
+  }
+
+  // Check for common placeholder values
+  const placeholders = ['your-api-key', 'api-key-here', 'enter-key', 'test', 'demo'];
+  if (placeholders.some(p => trimmedKey.toLowerCase().includes(p))) {
+    return { valid: false, message: "Please enter a valid API key" };
+  }
+
+  return { valid: true, message: "" };
+}
+
+// Load saved API key on page load
+if (apiKeyInput) {
+  const remember = getRememberPreference();
+  const storage = getStorage();
+
+  // Set checkbox state
+  if (rememberKeyCheckbox) {
+    rememberKeyCheckbox.checked = remember;
+  }
+
+  // Load saved key if it exists
+  if (storage) {
+    const savedKey = storage.getItem(storageKey);
+    if (savedKey) {
+      apiKeyInput.value = savedKey;
+    }
+  }
+
+  // Update help text based on remember preference
+  function updateHelpText() {
+    if (keyHelpText && rememberKeyCheckbox) {
+      if (rememberKeyCheckbox.checked) {
+        keyHelpText.textContent = "Your key is stored permanently in this browser";
+      } else {
+        keyHelpText.textContent = "Your key is stored temporarily in this browser session";
+      }
+    }
+  }
+
+  updateHelpText();
+
+  // Handle API key input changes
   apiKeyInput.addEventListener("input", (event) => {
-    storage.setItem(storageKey, event.target.value.trim());
+    const storage = getStorage();
+    if (storage) {
+      const trimmedKey = event.target.value.trim();
+      if (trimmedKey) {
+        storage.setItem(storageKey, trimmedKey);
+      } else {
+        storage.removeItem(storageKey);
+      }
+    }
   });
+
+  // Handle remember checkbox changes
+  if (rememberKeyCheckbox) {
+    rememberKeyCheckbox.addEventListener("change", (event) => {
+      const remember = event.target.checked;
+      setRememberPreference(remember);
+
+      // Move key between storage types
+      const currentKey = apiKeyInput.value.trim();
+      if (currentKey) {
+        try {
+          // Clear from old storage
+          window.sessionStorage.removeItem(storageKey);
+          window.localStorage.removeItem(storageKey);
+
+          // Save to new storage
+          const newStorage = getStorage();
+          if (newStorage) {
+            newStorage.setItem(storageKey, currentKey);
+          }
+        } catch (error) {
+          // Silently fail if storage is disabled
+        }
+      }
+
+      updateHelpText();
+    });
+  }
+
+  // Handle show/hide key visibility
+  if (toggleKeyVisibilityBtn) {
+    toggleKeyVisibilityBtn.addEventListener("click", () => {
+      if (apiKeyInput.type === "password") {
+        apiKeyInput.type = "text";
+        toggleKeyVisibilityBtn.setAttribute("aria-label", "Hide API key");
+        toggleKeyVisibilityBtn.title = "Hide key";
+      } else {
+        apiKeyInput.type = "password";
+        toggleKeyVisibilityBtn.setAttribute("aria-label", "Show API key");
+        toggleKeyVisibilityBtn.title = "Show key";
+      }
+    });
+  }
+
+  // Handle clear key button
+  if (clearKeyBtn) {
+    clearKeyBtn.addEventListener("click", () => {
+      apiKeyInput.value = "";
+      try {
+        window.sessionStorage.removeItem(storageKey);
+        window.localStorage.removeItem(storageKey);
+      } catch (error) {
+        // Silently fail if storage is disabled
+      }
+      apiKeyInput.focus();
+    });
+  }
 }
 
 const templates = {
@@ -121,8 +270,11 @@ function shouldRetryWithProxy(error) {
 
 async function fetchFromApi(path, params = {}) {
   const apiKey = apiKeyInput.value.trim();
-  if (!apiKey) {
-    throw new Error("Please enter your TheBus API key to continue.");
+
+  // Validate API key
+  const validation = validateApiKey(apiKey);
+  if (!validation.valid) {
+    throw new Error(validation.message);
   }
 
   const searchParams = new URLSearchParams({ key: apiKey });

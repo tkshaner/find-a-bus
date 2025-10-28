@@ -12,7 +12,8 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 
 - Enter your TheBus API key in the banner at the top of the page.
 - If you do not yet have a key, request one for free from the [TheBus developer portal](https://www.honolulutransit.org/).
-- The interface stores the key locally (via `localStorage`) so you only need to enter it once per browser.
+- **Security:** By default, your key is stored in `sessionStorage` and cleared when you close your browser tab. Check "Remember my key" to store it permanently in `localStorage`.
+- **Important:** Only use free developer API keys. Never enter production or paid API keys into this application.
 
 ### 3. Explore transit data
 
@@ -37,6 +38,8 @@ Because the project is a static site, you can deploy it to GitHub Pages without 
 - Stop arrivals list summarizing status, direction, and schedule adherence.
 - Consistent error, loading, and empty state messaging for better UX.
 - Responsive design with dark-mode support.
+- Secure API key handling with temporary storage by default.
+- Show/hide key visibility and clear key functionality.
 
 ## Project structure
 
@@ -47,3 +50,40 @@ Because the project is a static site, you can deploy it to GitHub Pages without 
 ├── styles.css    # Styling for the interface, cards, and states
 └── README.md
 ```
+
+## Security considerations
+
+This application handles API keys entirely in the browser. While we've implemented several security best practices, please be aware of the following:
+
+### How your API key is stored
+
+- **By default:** Your API key is stored in `sessionStorage`, which is cleared when you close your browser tab.
+- **With "Remember me" checked:** Your API key is stored in `localStorage`, which persists until you manually clear it.
+- **Visibility:** Your API key is hidden by default (password field), but can be toggled to visible.
+
+### Security limitations
+
+Because this is a client-side only application hosted on GitHub Pages:
+
+- API keys are accessible via browser developer tools
+- JavaScript on the page can access stored keys
+- Browser extensions may be able to access stored keys
+- There is no server-side protection or encryption
+
+### Best practices
+
+✅ **DO:**
+- Use free, rate-limited developer API keys only
+- Clear your API key when using shared computers (click the ✕ button)
+- Use sessionStorage mode (default) for better security
+- Regularly rotate your API keys
+
+❌ **DON'T:**
+- Use production API keys with billing enabled
+- Use API keys with sensitive data access
+- Share your API key with others
+- Use this tool on public/untrusted computers with "Remember me" enabled
+
+### For developers
+
+If you need production-grade security, consider implementing a backend proxy server that keeps API keys server-side. This client-side approach prioritizes simplicity and zero-cost hosting over maximum security.
