@@ -4,11 +4,23 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 
 ## Getting started
 
-1. Open `index.html` in a modern browser. No build steps are required.
-2. Enter your TheBus API key in the field at the top of the page. You can request one for free from the [TheBus developer portal](https://www.honolulutransit.org/).
-3. Use the panels to search for routes, look up a specific vehicle, or view arrivals for a stop.
+### 1. Launch the page
 
-> **Note:** Requests are sent directly to `https://api.thebus.org`. Browser security policies may block the call if the service does not enable CORS for your environment. If that happens, proxy the API through a server you control.
+- Open `index.html` in any modern browser. No build steps are required because the site is fully static.
+
+### 2. Add your API key
+
+- Enter your TheBus API key in the banner at the top of the page.
+- If you do not yet have a key, request one for free from the [TheBus developer portal](https://www.honolulutransit.org/).
+- The interface stores the key locally (via `localStorage`) so you only need to enter it once per browser.
+
+### 3. Explore transit data
+
+- **Routes panel:** Type a route number and optionally add a headsign keyword to narrow the results.
+- **Vehicles panel:** Enter a fleet number to see the vehicle's latest reported position and status.
+- **Arrivals panel:** Provide a stop number to view upcoming arrivals, including direction and schedule adherence.
+
+> **Tip:** If the browser blocks requests to `https://api.thebus.org` because of CORS, proxy the API through a server you control. The app automatically retries with a proxy-compatible URL when it detects parse or network errors.
 
 ## Deploying to GitHub Pages
 
