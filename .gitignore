@@ -1,0 +1,20 @@
+# Environment files
+*.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.log
+
+# Test files (optional - comment out if you want to commit test-api.html)
+# test-api.html

@@ -222,6 +222,38 @@ function createProxyUrl(url) {
   return `https://corsproxy.io/?${encoded}`;
 }
 
+// Parse XML vehicle response and convert to JSON format
+function parseVehicleXML(xmlString) {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+  // Check for XML parsing errors
+  const parserError = xmlDoc.querySelector("parsererror");
+  if (parserError) {
+    throw new Error("Invalid XML response");
+  }
+
+  const vehicleElements = xmlDoc.querySelectorAll("vehicle");
+  const vehicles = [];
+
+  vehicleElements.forEach((vehicleEl) => {
+    const vehicle = {};
+    // Get all child elements and convert to object
+    Array.from(vehicleEl.children).forEach((child) => {
+      const value = child.textContent;
+      // Convert "null" strings to actual null
+      vehicle[child.tagName] = value === "null" ? null : value;
+    });
+
+    vehicles.push({ vehicle });
+  });
+
+  return {
+    timestamp: xmlDoc.querySelector("timestamp")?.textContent || "",
+    vehicles: vehicles
+  };
+}
+
 async function fetchJson(url, { useProxy = false } = {}) {
   const targetUrl = useProxy ? createProxyUrl(url) : url;
   const headers = { Accept: "application/json" };
@@ -287,14 +319,29 @@ async function fetchFromApi(path, params = {}) {
   const url = new URL(path, apiBase);
   url.search = searchParams.toString();
 
+  // Special handling for /vehicle endpoint which returns XML
+  const isVehicleEndpoint = path.includes("/vehicle");
+
   try {
-    const data = await fetchJson(url.toString());
-    if (data.errorMessage) {
-      throw new Error(data.errorMessage);
+    if (isVehicleEndpoint) {
+      // Fetch XML for vehicle endpoint
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        throw new Error(`Request failed (${response.status})`);
+      }
+      const xmlText = await response.text();
+      return parseVehicleXML(xmlText);
+    } else {
+      // Fetch JSON for other endpoints
+      const data = await fetchJson(url.toString());
+      if (data.errorMessage) {
+        throw new Error(data.errorMessage);
+      }
+      return data;
     }
-    return data;
   } catch (error) {
-    if (!shouldRetryWithProxy(error)) {
+    // Retry with proxy for JSON endpoints only
+    if (isVehicleEndpoint || !shouldRetryWithProxy(error)) {
       throw error;
     }
 
@@ -350,7 +397,8 @@ vehicleForm?.addEventListener("submit", async (event) => {
   renderLoading(vehicleResults);
 
   try {
-    const data = await fetchFromApi("/vehicle", { num });
+    // Note: /vehicle endpoint returns XML, not JSON
+    const data = await fetchFromApi("/vehicle/", { num });
     const vehicles = data.vehicles ?? [];
 
     if (vehicles.length === 0) {
