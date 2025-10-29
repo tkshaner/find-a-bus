@@ -8,6 +8,9 @@ const routeResults = document.getElementById("routeResults");
 const vehicleResults = document.getElementById("vehicleResults");
 const arrivalsResults = document.getElementById("arrivalsResults");
 
+const routeMapContainer = document.getElementById("routeMap");
+const routeMapCanvas = document.getElementById("routeMapCanvas");
+
 const vehicleMapContainer = document.getElementById("vehicleMap");
 const vehicleMapCanvas = document.getElementById("vehicleMapCanvas");
 
@@ -189,6 +192,217 @@ const templates = {
   vehicle: document.getElementById("vehicle-template"),
   arrival: document.getElementById("arrival-template"),
 };
+
+// ============================================================================
+// ROUTE MAP FUNCTIONALITY
+// ============================================================================
+
+let routeMap = null;
+let routeShapesData = null;
+let routeStopsData = null;
+let routePolyline = null;
+let routeStopMarkers = [];
+
+// Initialize route map
+function initRouteMap() {
+  if (!routeMap && routeMapCanvas) {
+    // Center on Honolulu
+    routeMap = L.map(routeMapCanvas).setView([21.3099, -157.8581], 12);
+
+    // Add OpenStreetMap tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(routeMap);
+  }
+  return routeMap;
+}
+
+// Load route shapes data
+async function loadRouteShapesData() {
+  if (routeShapesData) {
+    return routeShapesData;
+  }
+
+  try {
+    const response = await fetch('routes-shapes.json');
+    if (!response.ok) {
+      throw new Error('Failed to load route shapes data');
+    }
+    routeShapesData = await response.json();
+    return routeShapesData;
+  } catch (error) {
+    console.error('Error loading route shapes:', error);
+    return null;
+  }
+}
+
+// Load route stops data
+async function loadRouteStopsData() {
+  if (routeStopsData) {
+    return routeStopsData;
+  }
+
+  try {
+    const response = await fetch('route-stops.json');
+    if (!response.ok) {
+      throw new Error('Failed to load route stops data');
+    }
+    routeStopsData = await response.json();
+    return routeStopsData;
+  } catch (error) {
+    console.error('Error loading route stops:', error);
+    return null;
+  }
+}
+
+// Draw route path on map
+async function drawRoutePath(routeId) {
+  // Load shapes data if needed
+  const shapesData = await loadRouteShapesData();
+  if (!shapesData || !shapesData[routeId]) {
+    console.warn('No shape data for route', routeId);
+    return null;
+  }
+
+  // Initialize map
+  initRouteMap();
+
+  // Clear existing polyline
+  if (routePolyline) {
+    routePolyline.remove();
+    routePolyline = null;
+  }
+
+  const routeData = shapesData[routeId];
+  const shapeId = Object.keys(routeData.shapes)[0];
+  const coordinates = routeData.shapes[shapeId];
+
+  if (!coordinates || coordinates.length === 0) {
+    return null;
+  }
+
+  // Create polyline
+  const color = routeData.color ? `#${routeData.color}` : '#2563eb';
+  routePolyline = L.polyline(coordinates, {
+    color: color,
+    weight: 5,
+    opacity: 0.7,
+    smoothFactor: 1
+  }).addTo(routeMap);
+
+  // Fit map to route bounds
+  routeMap.fitBounds(routePolyline.getBounds().pad(0.1));
+
+  // Add route info popup at start of route
+  const startPoint = coordinates[0];
+  L.marker(startPoint, {
+    icon: L.divIcon({
+      className: 'route-start-marker',
+      html: `<div style="
+        background: ${color};
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-weight: bold;
+        font-size: 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        white-space: nowrap;
+      ">Route ${routeData.name}</div>`,
+      iconSize: [60, 24],
+      iconAnchor: [30, 12]
+    })
+  }).addTo(routeMap);
+
+  return routePolyline;
+}
+
+// Add stop markers along route
+async function addRouteStops(routeId) {
+  // Clear existing stop markers
+  routeStopMarkers.forEach(marker => marker.remove());
+  routeStopMarkers = [];
+
+  // Load stops data
+  const stopsData = await loadRouteStopsData();
+  if (!stopsData || !stopsData[routeId]) {
+    console.warn('No stop data for route', routeId);
+    return;
+  }
+
+  const routeData = stopsData[routeId];
+
+  // Get first shape's stops
+  const shapeId = Object.keys(routeData.shapes)[0];
+  const stops = routeData.shapes[shapeId];
+
+  if (!stops || stops.length === 0) {
+    return;
+  }
+
+  // Create small circular markers for stops
+  stops.forEach((stop, index) => {
+    const isFirst = index === 0;
+    const isLast = index === stops.length - 1;
+
+    const marker = L.circleMarker([stop.lat, stop.lon], {
+      radius: 6,
+      fillColor: isFirst ? '#10b981' : isLast ? '#ef4444' : '#ffffff',
+      color: '#2563eb',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.9
+    }).addTo(routeMap);
+
+    // Add popup with stop info
+    const popupContent = `
+      <div style="min-width: 180px;">
+        <h4 style="margin: 0 0 8px 0; color: var(--color-primary);">${stop.name}</h4>
+        <dl style="margin: 0; display: grid; gap: 4px; font-size: 0.85em;">
+          <div><dt style="font-weight: 600;">Stop Code:</dt><dd style="margin: 0;">${stop.code || stop.id}</dd></div>
+          <div><dt style="font-weight: 600;">Sequence:</dt><dd style="margin: 0;">#${stop.sequence} of ${stops.length}</dd></div>
+          ${isFirst ? '<div style="color: #10b981; font-weight: 600; margin-top: 4px;">First Stop</div>' : ''}
+          ${isLast ? '<div style="color: #ef4444; font-weight: 600; margin-top: 4px;">Last Stop</div>' : ''}
+        </dl>
+        <button onclick="checkStopArrivals('${stop.code || stop.id}')"
+                style="width: 100%; margin-top: 8px; padding: 6px 12px; background: var(--color-primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+          Check Arrivals
+        </button>
+      </div>
+    `;
+
+    marker.bindPopup(popupContent);
+    routeStopMarkers.push(marker);
+  });
+
+  console.log(`Added ${stops.length} stop markers to route ${routeId}`);
+}
+
+// Show route map
+function showRouteMap() {
+  if (routeMapContainer) {
+    routeMapContainer.style.display = 'block';
+    setTimeout(() => {
+      if (routeMap) {
+        routeMap.invalidateSize();
+      }
+    }, 100);
+  }
+}
+
+// Hide route map
+function hideRouteMap() {
+  if (routeMapContainer) {
+    routeMapContainer.style.display = 'none';
+  }
+  if (routePolyline) {
+    routePolyline.remove();
+    routePolyline = null;
+  }
+  // Clear stop markers
+  routeStopMarkers.forEach(marker => marker.remove());
+  routeStopMarkers = [];
+}
 
 // Map instance for vehicle tracking
 let vehicleMap = null;
@@ -807,6 +1021,7 @@ routeForm?.addEventListener("submit", async (event) => {
   const headsign = formData.get("headsign");
 
   renderLoading(routeResults);
+  hideRouteMap();
 
   try {
     const data = await fetchFromApi("/routeJSON", {
@@ -816,15 +1031,45 @@ routeForm?.addEventListener("submit", async (event) => {
 
     if (!data.route || data.route.length === 0) {
       renderMessage(routeResults, "No routes found. Try a different search.");
+      hideRouteMap();
       return;
     }
 
+    // Draw route path on map
+    const drawnRoute = await drawRoutePath(route);
+    if (drawnRoute) {
+      // Add stop markers along the route
+      await addRouteStops(route);
+      showRouteMap();
+    }
+
+    // Still show cards below map for detailed info
     routeResults.replaceChildren();
+
+    // Add route summary header
+    const shapesData = await loadRouteShapesData();
+    if (shapesData && shapesData[route]) {
+      const routeInfo = shapesData[route];
+      const header = document.createElement("div");
+      header.className = "route-header";
+      header.innerHTML = `
+        <h3 style="margin: 0 0 0.5rem 0; color: var(--color-primary);">
+          Route ${routeInfo.name}: ${routeInfo.long_name}
+        </h3>
+        <p style="margin: 0; color: var(--color-text-muted);">
+          ${data.route.length} variant${data.route.length > 1 ? 's' : ''} found
+        </p>
+      `;
+      routeResults.append(header);
+    }
+
+    // Show route variant cards
     data.route.forEach((routeItem) => {
       renderCard(routeResults, templates.route, routeItem);
     });
   } catch (error) {
     renderMessage(routeResults, error.message, "error-state");
+    hideRouteMap();
   }
 });
 
