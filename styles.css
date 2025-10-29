@@ -236,6 +236,24 @@ input[type="text"]:focus {
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
 }
 
+select.variant-select {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  font-size: 1rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+}
+
+select.variant-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
+}
+
 .btn {
   align-self: end;
   padding: 0.75rem 1.5rem;

@@ -10,6 +10,8 @@ const arrivalsResults = document.getElementById("arrivalsResults");
 
 const routeMapContainer = document.getElementById("routeMap");
 const routeMapCanvas = document.getElementById("routeMapCanvas");
+const routeVariantSelector = document.getElementById("routeVariantSelector");
+const variantSelect = document.getElementById("variantSelect");
 
 const vehicleMapContainer = document.getElementById("vehicleMap");
 const vehicleMapCanvas = document.getElementById("vehicleMapCanvas");
@@ -202,6 +204,7 @@ let routeShapesData = null;
 let routeStopsData = null;
 let routePolyline = null;
 let routeStopMarkers = [];
+let currentRouteNum = null;
 
 // Initialize route map
 function initRouteMap() {
@@ -257,7 +260,7 @@ async function loadRouteStopsData() {
 }
 
 // Draw route path on map
-async function drawRoutePath(routeId) {
+async function drawRoutePath(routeId, shapeIdOverride = null) {
   // Load shapes data if needed
   const shapesData = await loadRouteShapesData();
   if (!shapesData || !shapesData[routeId]) {
@@ -275,7 +278,8 @@ async function drawRoutePath(routeId) {
   }
 
   const routeData = shapesData[routeId];
-  const shapeId = Object.keys(routeData.shapes)[0];
+  // Use provided shape ID or default to first shape
+  const shapeId = shapeIdOverride || Object.keys(routeData.shapes)[0];
   const coordinates = routeData.shapes[shapeId];
 
   if (!coordinates || coordinates.length === 0) {
@@ -318,7 +322,7 @@ async function drawRoutePath(routeId) {
 }
 
 // Add stop markers along route
-async function addRouteStops(routeId) {
+async function addRouteStops(routeId, shapeIdOverride = null) {
   // Clear existing stop markers
   routeStopMarkers.forEach(marker => marker.remove());
   routeStopMarkers = [];
@@ -332,8 +336,8 @@ async function addRouteStops(routeId) {
 
   const routeData = stopsData[routeId];
 
-  // Get first shape's stops
-  const shapeId = Object.keys(routeData.shapes)[0];
+  // Use provided shape ID or default to first shape
+  const shapeId = shapeIdOverride || Object.keys(routeData.shapes)[0];
   const stops = routeData.shapes[shapeId];
 
   if (!stops || stops.length === 0) {
@@ -1014,6 +1018,63 @@ async function fetchFromApi(path, params = {}) {
   }
 }
 
+// Populate route variant selector
+async function populateVariantSelector(routeNum) {
+  const shapesData = await loadRouteShapesData();
+  const stopsData = await loadRouteStopsData();
+
+  if (!shapesData || !shapesData[routeNum] || !stopsData || !stopsData[routeNum]) {
+    routeVariantSelector.style.display = 'none';
+    return;
+  }
+
+  const shapeIds = Object.keys(shapesData[routeNum].shapes);
+
+  // Only show selector if there are multiple variants
+  if (shapeIds.length <= 1) {
+    routeVariantSelector.style.display = 'none';
+    return;
+  }
+
+  // Clear existing options
+  variantSelect.replaceChildren();
+
+  // Create options for each variant with descriptive names
+  shapeIds.forEach((shapeId, index) => {
+    const stops = stopsData[routeNum].shapes[shapeId];
+    if (!stops || stops.length === 0) return;
+
+    const firstStop = stops[0].name;
+    const lastStop = stops[stops.length - 1].name;
+    const numStops = stops.length;
+
+    const option = document.createElement('option');
+    option.value = shapeId;
+    option.textContent = `Variant ${index + 1}: ${firstStop} → ${lastStop} (${numStops} stops)`;
+    variantSelect.appendChild(option);
+  });
+
+  // Show the selector
+  routeVariantSelector.style.display = 'block';
+
+  // Select the first variant by default
+  variantSelect.selectedIndex = 0;
+}
+
+// Handle variant selection change
+async function handleVariantChange() {
+  if (!currentRouteNum) return;
+
+  const selectedShapeId = variantSelect.value;
+
+  // Redraw route with selected variant
+  await drawRoutePath(currentRouteNum, selectedShapeId);
+  await addRouteStops(currentRouteNum, selectedShapeId);
+}
+
+// Add event listener for variant selector
+variantSelect?.addEventListener('change', handleVariantChange);
+
 routeForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(routeForm);
@@ -1022,6 +1083,7 @@ routeForm?.addEventListener("submit", async (event) => {
 
   renderLoading(routeResults);
   hideRouteMap();
+  routeVariantSelector.style.display = 'none'; // Hide variant selector while loading
 
   try {
     const data = await fetchFromApi("/routeJSON", {
@@ -1032,12 +1094,18 @@ routeForm?.addEventListener("submit", async (event) => {
     if (!data.route || data.route.length === 0) {
       renderMessage(routeResults, "No routes found. Try a different search.");
       hideRouteMap();
+      currentRouteNum = null;
       return;
     }
 
     // Draw route path on map using the route number from API response
     // This matches the route_short_name (user-facing route number)
     const routeNum = data.route[0]?.routeNum || route;
+    currentRouteNum = routeNum; // Store for variant selection
+
+    // Populate variant selector
+    await populateVariantSelector(routeNum);
+
     const drawnRoute = await drawRoutePath(routeNum);
     if (drawnRoute) {
       // Add stop markers along the route

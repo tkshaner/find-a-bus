@@ -90,6 +90,14 @@
           </label>
           <button type="submit" class="btn">Search Routes</button>
         </form>
+        <div id="routeVariantSelector" style="display: none; margin: 1rem 0;">
+          <label class="input-group" for="variantSelect">
+            <span>Route Variant</span>
+            <select id="variantSelect" class="variant-select">
+              <!-- Options populated dynamically -->
+            </select>
+          </label>
+        </div>
         <div id="routeMap" class="map-container" style="display: none;">
           <div id="routeMapCanvas" class="map-canvas"></div>
         </div>
