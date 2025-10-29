@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2025-10-28
+
+### Added
+- **Route Visualization on Map**: Interactive route path display
+  - Polyline showing complete route path using GTFS shapes
+  - Stop markers along route showing sequence
+  - First stop (green), last stop (red), intermediate stops (white)
+  - Click stops to see name, code, sequence, and check arrivals
+  - Route colored using GTFS route_color field
+  - Auto-fit map to route bounds
+- **Route Summary Header**: Enhanced route information display
+  - Full route name from GTFS (e.g., "Route 2: School-Waikiki-Kahala")
+  - Variant count indicator
+  - Displayed above route cards
+- **GTFS Conversion Scripts**: Python tools for data processing
+  - convert_route_stops.py: Extracts stop sequences from GTFS
+  - Processes 1.4M stop_times records efficiently
+  - Maintains stop order and sequence numbers
+
+### Technical
+- routes-shapes.json: 397 KB, simplified to every 3rd point
+- route-stops.json: 3 MB, complete stop sequences for all routes
+- Lazy-loaded data files (only fetched when route searched)
+- Leaflet polyline with smoothing for route paths
+- CircleMarker implementation for stop visualization
+- Integrated with existing arrivals workflow
+
+### Data
+- Route path coordinates for 120+ routes
+- Stop sequences with coordinates and metadata
+- Color information from GTFS for route styling
+
+### User Experience
+- Visual route exploration instead of text-only cards
+- Easy stop discovery along route
+- One-click navigation from stop to arrivals
+- Responsive map display (same styling as vehicle/stops maps)
+- Auto-hide map when no results found
+
 ## [1.3.0] - 2025-10-28
 
 ### Added
