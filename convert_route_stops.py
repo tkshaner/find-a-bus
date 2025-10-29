@@ -110,12 +110,14 @@ def main():
 
     print(f"\nFound stops for {len(route_stops)} routes")
 
-    # Add route metadata
+    # Add route metadata - use route_short_name as key for user-facing route numbers
     output = {}
     for route_id, shapes in route_stops.items():
         if route_id in routes:
-            output[route_id] = {
-                'name': routes[route_id]['route_short_name'],
+            route_short_name = routes[route_id]['route_short_name']
+            output[route_short_name] = {
+                'id': route_id,
+                'name': route_short_name,
                 'long_name': routes[route_id]['route_long_name'],
                 'shapes': shapes
             }

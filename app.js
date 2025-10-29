@@ -1035,21 +1035,23 @@ routeForm?.addEventListener("submit", async (event) => {
       return;
     }
 
-    // Draw route path on map
-    const drawnRoute = await drawRoutePath(route);
+    // Draw route path on map using the route number from API response
+    // This matches the route_short_name (user-facing route number)
+    const routeNum = data.route[0]?.routeNum || route;
+    const drawnRoute = await drawRoutePath(routeNum);
     if (drawnRoute) {
       // Add stop markers along the route
-      await addRouteStops(route);
+      await addRouteStops(routeNum);
       showRouteMap();
     }
 
     // Still show cards below map for detailed info
     routeResults.replaceChildren();
 
-    // Add route summary header
+    // Add route summary header using the route number from API response
     const shapesData = await loadRouteShapesData();
-    if (shapesData && shapesData[route]) {
-      const routeInfo = shapesData[route];
+    if (shapesData && shapesData[routeNum]) {
+      const routeInfo = shapesData[routeNum];
       const header = document.createElement("div");
       header.className = "route-header";
       header.innerHTML = `
