@@ -47,11 +47,25 @@ Because the project is a static site, you can deploy it to GitHub Pages without 
 
 ```
 .
-├── app.js         # Fetches data from the API and renders results
-├── index.html     # Layout and form controls for the interface
-├── styles.css     # Styling for the interface, cards, and states
-├── README.md      # Project documentation
-└── CHANGELOG.md   # Development log and version history
+├── app.js                    # Fetches data from the API and renders results
+├── index.html                # Layout and form controls for the interface
+├── styles.css                # Styling for the interface, cards, and states
+├── stops.json                # 3,825 bus stop locations (364 KB)
+├── routes-shapes.json        # Route path coordinates (397 KB)
+├── route-stops.json          # Stop sequences for routes (3 MB)
+├── convert_route_stops.py    # GTFS to JSON conversion script
+├── README.md                 # Project documentation
+├── CHANGELOG.md              # Development log and version history
+├── TESTING.md                # Test documentation and guide
+├── package.json              # Node.js dependencies for testing
+├── playwright.config.js      # Playwright test configuration
+└── tests/                    # Playwright test suite (69 tests)
+    ├── api-key.spec.js
+    ├── route-search.spec.js
+    ├── vehicle-tracking.spec.js
+    ├── stops-map.spec.js
+    ├── arrivals.spec.js
+    └── page-structure.spec.js
 ```
 
 ## Security considerations
@@ -90,3 +104,45 @@ Because this is a client-side only application hosted on GitHub Pages:
 ### For developers
 
 If you need production-grade security, consider implementing a backend proxy server that keeps API keys server-side. This client-side approach prioritizes simplicity and zero-cost hosting over maximum security.
+
+## Testing
+
+This project includes a comprehensive Playwright test suite with **69 automated tests** covering all major functionality across multiple browsers and devices.
+
+### Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Install Playwright browsers
+npx playwright install
+
+# Run all tests
+npm test
+
+# Run tests with UI (interactive)
+npm run test:ui
+
+# View test report
+npm run test:report
+```
+
+### Test Coverage
+
+- ✅ **API Key Management** (8 tests): Storage, visibility, security
+- ✅ **Route Search** (12 tests): Forms, data validation, visualization
+- ✅ **Vehicle Tracking** (9 tests): Map display, templates, integration
+- ✅ **Stops Map** (13 tests): 3,825 stops, clustering, geolocation
+- ✅ **Arrivals** (8 tests): Form validation, results display
+- ✅ **Page Structure** (19 tests): Layout, responsive design, accessibility
+
+### Browser Coverage
+
+Tests run on:
+- Chromium (Chrome/Edge)
+- Firefox
+- WebKit (Safari)
+- Mobile (Pixel 5, iPhone 12)
+
+For detailed testing documentation, see [TESTING.md](TESTING.md).

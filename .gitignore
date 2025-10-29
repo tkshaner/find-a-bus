@@ -23,3 +23,12 @@ Thumbs.db
 
 # GTFS data directory
 gtfs/
+
+# Node modules and dependencies
+node_modules/
+package-lock.json
+
+# Playwright artifacts
+test-results/
+playwright-report/
+playwright/.cache/
