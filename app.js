@@ -842,7 +842,15 @@ function renderCard(container, template, data) {
       value = data[key] ? "Real-time update" : "Scheduled only";
     }
     if (key === "canceled") {
-      value = data[key] ? "Canceled" : "On schedule";
+      // canceled values: 0 = active, 1 = canceled, -1 = was canceled but restored
+      const canceledStatus = parseInt(data[key]);
+      if (canceledStatus === 1) {
+        value = "Canceled";
+      } else if (canceledStatus === -1) {
+        value = "Restored (was canceled)";
+      } else {
+        value = "Active";
+      }
     }
     if (key === "adherence" && value) {
       value = formatAdherence(value);
