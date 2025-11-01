@@ -1,5 +1,84 @@
 const apiBase = "https://api.thebus.org";
 
+const themeToggle = document.getElementById("themeToggle");
+const themeStorageKey = "findabus-theme";
+const prefersDarkTheme = typeof window.matchMedia === "function"
+  ? window.matchMedia("(prefers-color-scheme: dark)")
+  : { matches: false };
+
+let storedTheme = null;
+let hasStoredPreference = false;
+
+try {
+  const savedTheme = window.localStorage.getItem(themeStorageKey);
+  if (savedTheme === "light" || savedTheme === "dark") {
+    storedTheme = savedTheme;
+    hasStoredPreference = true;
+  }
+} catch (error) {
+  hasStoredPreference = false;
+}
+
+function resolveTheme() {
+  if (hasStoredPreference && storedTheme) {
+    return storedTheme;
+  }
+  return prefersDarkTheme.matches ? "dark" : "light";
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+
+  if (themeToggle) {
+    const isDark = theme === "dark";
+    themeToggle.setAttribute("aria-pressed", String(isDark));
+
+    const icon = themeToggle.querySelector("[data-theme-icon]");
+    const label = themeToggle.querySelector("[data-theme-label]");
+
+    if (icon) {
+      icon.textContent = isDark ? "🌙" : "🌞";
+    }
+
+    if (label) {
+      label.textContent = isDark ? "Dark mode" : "Light mode";
+    }
+
+    const toggleText = isDark ? "Switch to light mode" : "Switch to dark mode";
+    themeToggle.setAttribute("title", toggleText);
+    themeToggle.setAttribute("aria-label", toggleText);
+  }
+}
+
+applyTheme(resolveTheme());
+
+if (themeToggle) {
+  themeToggle.addEventListener("click", () => {
+    const newTheme = resolveTheme() === "dark" ? "light" : "dark";
+    applyTheme(newTheme);
+    storedTheme = newTheme;
+    hasStoredPreference = true;
+
+    try {
+      window.localStorage.setItem(themeStorageKey, newTheme);
+    } catch (error) {
+      // Ignore write failures (private mode, etc.)
+    }
+  });
+}
+
+const handleSystemThemeChange = (event) => {
+  if (!hasStoredPreference) {
+    applyTheme(event.matches ? "dark" : "light");
+  }
+};
+
+if (typeof prefersDarkTheme.addEventListener === "function") {
+  prefersDarkTheme.addEventListener("change", handleSystemThemeChange);
+} else if (typeof prefersDarkTheme.addListener === "function") {
+  prefersDarkTheme.addListener(handleSystemThemeChange);
+}
+
 const routeForm = document.getElementById("routeForm");
 const vehicleForm = document.getElementById("vehicleForm");
 const arrivalsForm = document.getElementById("arrivalsForm");
