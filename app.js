@@ -35,16 +35,17 @@ function applyTheme(theme) {
 
     const icon = themeToggle.querySelector("[data-theme-icon]");
     const label = themeToggle.querySelector("[data-theme-label]");
+    const nextTheme = isDark ? "light" : "dark";
+    const toggleText = `Switch to ${nextTheme} mode`;
 
     if (icon) {
-      icon.textContent = isDark ? "🌙" : "🌞";
+      icon.textContent = nextTheme === "dark" ? "🌙" : "🌞";
     }
 
     if (label) {
-      label.textContent = isDark ? "Dark mode" : "Light mode";
+      label.textContent = toggleText;
     }
 
-    const toggleText = isDark ? "Switch to light mode" : "Switch to dark mode";
     themeToggle.setAttribute("title", toggleText);
     themeToggle.setAttribute("aria-label", toggleText);
   }
