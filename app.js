@@ -1006,7 +1006,6 @@ async function fetchJson(url, { useProxy = false, proxyIndex = 0 } = {}) {
   if (useProxy) {
     targetUrl = createProxyUrl(url, proxyIndex);
     Object.assign(headers, getProxyHeaders(proxyIndex));
-    headers["X-Requested-With"] = "find-a-bus";
   }
 
   const response = await fetch(targetUrl, { headers });
