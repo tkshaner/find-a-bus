@@ -1,5 +1,16 @@
 const apiBase = "https://api.thebus.org";
 
+const corsProxies = [
+  {
+    buildUrl: (url) => `https://proxy.cors.sh/${url}`,
+    headers: { "x-cors-api-key": "temp_dont_abuse" }
+  },
+  {
+    buildUrl: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    headers: {}
+  }
+];
+
 const themeToggle = document.getElementById("themeToggle");
 const themeStorageKey = "findabus-theme";
 const prefersDarkTheme = typeof window.matchMedia === "function"
@@ -944,9 +955,16 @@ function renderCard(container, template, data) {
   container.append(card);
 }
 
-function createProxyUrl(url) {
-  const encoded = encodeURIComponent(url);
-  return `https://corsproxy.io/?${encoded}`;
+function createProxyUrl(url, proxyIndex = 0) {
+  const proxy = corsProxies[proxyIndex];
+  if (!proxy) {
+    throw new Error("Invalid proxy index");
+  }
+  return proxy.buildUrl(url);
+}
+
+function getProxyHeaders(proxyIndex = 0) {
+  return { ...(corsProxies[proxyIndex]?.headers || {}) };
 }
 
 // Parse XML vehicle response and convert to JSON format
@@ -981,11 +999,13 @@ function parseVehicleXML(xmlString) {
   };
 }
 
-async function fetchJson(url, { useProxy = false } = {}) {
-  const targetUrl = useProxy ? createProxyUrl(url) : url;
+async function fetchJson(url, { useProxy = false, proxyIndex = 0 } = {}) {
   const headers = { Accept: "application/json" };
+  let targetUrl = url;
 
   if (useProxy) {
+    targetUrl = createProxyUrl(url, proxyIndex);
+    Object.assign(headers, getProxyHeaders(proxyIndex));
     headers["X-Requested-With"] = "find-a-bus";
   }
 
@@ -1072,37 +1092,51 @@ async function fetchFromApi(path, params = {}) {
       throw error;
     }
 
-    // For vehicle endpoint, retry with proxy on any error (likely CORS)
+    // For vehicle endpoint, retry with proxy chain on any error (likely CORS)
     if (isVehicleEndpoint) {
-      try {
-        const proxyUrl = createProxyUrl(url.toString());
-        const response = await fetch(proxyUrl, {
-          headers: { "X-Requested-With": "find-a-bus" }
-        });
-        if (!response.ok) {
-          throw new Error(`Request failed via proxy (${response.status})`);
+      for (let proxyIndex = 0; proxyIndex < corsProxies.length; proxyIndex += 1) {
+        try {
+          const proxyUrl = createProxyUrl(url.toString(), proxyIndex);
+          const headers = {
+            "X-Requested-With": "find-a-bus",
+            ...getProxyHeaders(proxyIndex)
+          };
+          const response = await fetch(proxyUrl, { headers });
+          if (!response.ok) {
+            throw new Error(`Request failed via proxy (${response.status})`);
+          }
+          const xmlText = await response.text();
+          return parseVehicleXML(xmlText);
+        } catch (proxyError) {
+          // Try next proxy in chain
         }
-        const xmlText = await response.text();
-        return parseVehicleXML(xmlText);
-      } catch (proxyError) {
-        throw new Error("Unable to fetch vehicle data. Please try again later.");
       }
+
+      throw new Error("Unable to fetch vehicle data. Please try again later.");
     }
 
     // Retry JSON endpoints with proxy
-    try {
-      const data = await fetchJson(url.toString(), { useProxy: true });
-      if (data.errorMessage) {
-        throw new Error(data.errorMessage);
+    let lastProxyError = null;
+    for (let proxyIndex = 0; proxyIndex < corsProxies.length; proxyIndex += 1) {
+      try {
+        const data = await fetchJson(url.toString(), {
+          useProxy: true,
+          proxyIndex
+        });
+        if (data.errorMessage) {
+          throw new Error(data.errorMessage);
+        }
+        return data;
+      } catch (proxyError) {
+        lastProxyError = proxyError;
       }
-      return data;
-    } catch (proxyError) {
-      if (proxyError.name === "JsonParseError") {
-        throw new Error("Received an unexpected response from TheBus API.");
-      }
-
-      throw proxyError;
     }
+
+    if (lastProxyError?.name === "JsonParseError") {
+      throw new Error("Received an unexpected response from TheBus API.");
+    }
+
+    throw lastProxyError || error;
   }
 }
 
