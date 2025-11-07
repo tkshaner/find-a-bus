@@ -2,14 +2,39 @@ const apiBase = "https://api.thebus.org";
 
 const corsProxies = [
   {
-    buildUrl: (url) => `https://proxy.cors.sh/${url}`,
-    headers: { "x-cors-api-key": "temp_dont_abuse" }
+    name: "cors.isomorphic-git",
+    buildUrl: (url) => `https://cors.isomorphic-git.org/${url}`,
+    headers: {}
   },
   {
+    name: "corsproxy.io",
+    buildUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    headers: {}
+  },
+  {
+    name: "allorigins",
     buildUrl: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     headers: {}
   }
 ];
+
+function shouldForceProxyRequests() {
+  if (typeof window === "undefined" || !window.location) {
+    return false;
+  }
+
+  const hostname = String(window.location.hostname || "").toLowerCase();
+
+  if (!hostname) {
+    return false;
+  }
+
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return false;
+  }
+
+  return hostname.endsWith("github.io") || hostname.endsWith("githubusercontent.com");
+}
 
 const themeToggle = document.getElementById("themeToggle");
 const themeStorageKey = "findabus-theme";
@@ -1039,6 +1064,10 @@ function shouldRetryWithProxy(error) {
     return true;
   }
 
+  if (typeof error.status === "number" && (error.status === 0 || error.status === 403)) {
+    return true;
+  }
+
   if (typeof TypeError !== "undefined" && error instanceof TypeError) {
     return true;
   }
@@ -1055,6 +1084,10 @@ async function fetchFromApi(path, params = {}) {
     throw new Error(validation.message);
   }
 
+  const forceProxyRequests = shouldForceProxyRequests();
+  const skipDirectFetchError = new Error("Skip direct fetch");
+  skipDirectFetchError.name = "SkipDirectFetchError";
+
   const searchParams = new URLSearchParams({ key: apiKey });
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -1070,6 +1103,9 @@ async function fetchFromApi(path, params = {}) {
 
   try {
     if (isVehicleEndpoint) {
+      if (forceProxyRequests) {
+        throw skipDirectFetchError;
+      }
       // Fetch XML for vehicle endpoint
       const response = await fetch(url.toString());
       if (!response.ok) {
@@ -1078,6 +1114,9 @@ async function fetchFromApi(path, params = {}) {
       const xmlText = await response.text();
       return parseVehicleXML(xmlText);
     } else {
+      if (forceProxyRequests) {
+        throw skipDirectFetchError;
+      }
       // Fetch JSON for other endpoints
       const data = await fetchJson(url.toString());
       if (data.errorMessage) {
@@ -1087,7 +1126,7 @@ async function fetchFromApi(path, params = {}) {
     }
   } catch (error) {
     // Retry with proxy for both XML and JSON endpoints on CORS/network errors
-    if (!isVehicleEndpoint && !shouldRetryWithProxy(error)) {
+    if (!isVehicleEndpoint && !forceProxyRequests && !shouldRetryWithProxy(error)) {
       throw error;
     }
 
