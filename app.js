@@ -953,6 +953,7 @@ function renderCard(container, template, data) {
   card.querySelectorAll("[data-field]").forEach((node) => {
     const key = node.getAttribute("data-field");
     let value = data[key];
+    let didSetCustomValue = false;
 
     if (key === "estimated") {
       value = data[key] ? "Real-time update" : "Scheduled only";
@@ -971,11 +972,34 @@ function renderCard(container, template, data) {
     if (key === "adherence" && value) {
       value = formatAdherence(value);
     }
+
+    if (key === "vehicle" && value !== undefined && value !== null && value !== "") {
+      const link = document.createElement("a");
+      link.href = "#vehicle-title";
+      link.textContent = value;
+      link.setAttribute("aria-label", `View vehicle ${value}`);
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        const vehicleInput = document.getElementById("vehicleNumber");
+        if (vehicleInput) {
+          vehicleInput.value = value;
+        }
+        const vehicleSection = document.querySelector("#vehicle-title")?.closest(".panel");
+        vehicleSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+        const vehicleForm = document.getElementById("vehicleForm");
+        vehicleForm?.requestSubmit();
+      });
+      node.replaceChildren(link);
+      didSetCustomValue = true;
+    }
+
     if (value === undefined || value === null || value === "") {
       value = "—";
     }
 
-    node.textContent = value;
+    if (!didSetCustomValue) {
+      node.textContent = value;
+    }
   });
   container.append(card);
 }
