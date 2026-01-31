@@ -1088,7 +1088,7 @@ function shouldRetryWithProxy(error) {
     return true;
   }
 
-  if (typeof error.status === "number" && (error.status === 0 || error.status === 403)) {
+  if (typeof error.status === "number" && (error.status === 0 || error.status === 400 || error.status === 403)) {
     return true;
   }
 
@@ -1270,7 +1270,7 @@ routeForm?.addEventListener("submit", async (event) => {
   routeVariantSelector.style.display = 'none'; // Hide variant selector while loading
 
   try {
-    const data = await fetchFromApi("/routeJSON", {
+    const data = await fetchFromApi("/routeJSON/", {
       route,
       ...(headsign ? { headsign } : {}),
     });
@@ -1378,7 +1378,7 @@ arrivalsForm?.addEventListener("submit", async (event) => {
   renderLoading(arrivalsResults);
 
   try {
-    const data = await fetchFromApi("/arrivalsJSON", { stop });
+    const data = await fetchFromApi("/arrivalsJSON/", { stop });
     const arrivals = data.arrivals ?? [];
 
     if (arrivals.length === 0) {
