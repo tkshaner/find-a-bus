@@ -842,10 +842,23 @@ window.checkStopArrivals = function(stopId) {
 };
 
 // Find nearby stops using geolocation
-function findNearbyStops() {
+async function findNearbyStops() {
   if (!navigator.geolocation) {
     showStopsMessage('Geolocation is not supported by your browser', true);
     return;
+  }
+
+  // Check permission status before requesting location
+  if (navigator.permissions) {
+    try {
+      const status = await navigator.permissions.query({ name: 'geolocation' });
+      if (status.state === 'denied') {
+        showStopsMessage('Location permission is blocked. Please enable location access in your browser settings and reload the page.', true);
+        return;
+      }
+    } catch (e) {
+      // Permissions API not supported for geolocation in this browser; proceed normally
+    }
   }
 
   showStopsMessage('Getting your location...');
@@ -902,8 +915,23 @@ function findNearbyStops() {
       setTimeout(() => hideStopsMessage(), 3000);
     },
     (error) => {
-      showStopsMessage('Unable to get your location: ' + error.message, true);
-    }
+      let message;
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          message = 'Location permission was denied. Please enable location access in your browser settings and reload the page.';
+          break;
+        case error.POSITION_UNAVAILABLE:
+          message = 'Location information is unavailable. Please check that location services are enabled on your device.';
+          break;
+        case error.TIMEOUT:
+          message = 'Location request timed out. Please try again.';
+          break;
+        default:
+          message = 'Unable to get your location: ' + error.message;
+      }
+      showStopsMessage(message, true);
+    },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
   );
 }
 
