@@ -142,3 +142,66 @@ test.describe('All Stops Map', () => {
     await expect(mapControls).toBeVisible();
   });
 });
+
+test.describe('Geolocation - Find Stops Near Me', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    // Show the map so the Find Stops Near Me button becomes visible
+    await page.locator('#toggleStopsBtn').click();
+    await expect(page.locator('#findNearbyBtn')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should show permission denied message when geolocation is blocked', async ({ page, context }) => {
+    // Deny geolocation permissions
+    await context.clearPermissions();
+
+    await page.locator('#findNearbyBtn').click();
+
+    const stopsMessage = page.locator('#stopsMessage');
+    await expect(stopsMessage).toBeVisible({ timeout: 5000 });
+    await expect(stopsMessage).toContainText('Location permission');
+  });
+
+  test('should show nearby stops when geolocation is granted', async ({ page, context }) => {
+    // Grant geolocation and set a position in Honolulu
+    await context.grantPermissions(['geolocation']);
+    await context.setGeolocation({ latitude: 21.3069, longitude: -157.8583 });
+
+    await page.locator('#findNearbyBtn').click();
+
+    const stopsMessage = page.locator('#stopsMessage');
+    // Should show either "Getting your location..." or "Found X stops..."
+    await expect(stopsMessage).toBeVisible({ timeout: 10000 });
+    await expect(stopsMessage).toContainText(/Found \d+ stops|Getting your location/);
+  });
+
+  test('should show error message when geolocation is unavailable', async ({ page }) => {
+    // Override geolocation to simulate POSITION_UNAVAILABLE
+    await page.evaluate(() => {
+      navigator.geolocation.getCurrentPosition = (_success, error) => {
+        error({ code: 2, message: 'Position unavailable', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 });
+      };
+    });
+
+    await page.locator('#findNearbyBtn').click();
+
+    const stopsMessage = page.locator('#stopsMessage');
+    await expect(stopsMessage).toBeVisible({ timeout: 5000 });
+    await expect(stopsMessage).toContainText('Location information is unavailable');
+  });
+
+  test('should show timeout message when geolocation times out', async ({ page }) => {
+    // Override geolocation to simulate TIMEOUT
+    await page.evaluate(() => {
+      navigator.geolocation.getCurrentPosition = (_success, error) => {
+        error({ code: 3, message: 'Timeout', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 });
+      };
+    });
+
+    await page.locator('#findNearbyBtn').click();
+
+    const stopsMessage = page.locator('#stopsMessage');
+    await expect(stopsMessage).toBeVisible({ timeout: 5000 });
+    await expect(stopsMessage).toContainText('timed out');
+  });
+});
