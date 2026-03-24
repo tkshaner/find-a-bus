@@ -105,6 +105,7 @@ const arrivalsForm = document.getElementById("arrivalsForm");
 const routeResults = document.getElementById("routeResults");
 const vehicleResults = document.getElementById("vehicleResults");
 const arrivalsResults = document.getElementById("arrivalsResults");
+const savedCommuteResults = document.getElementById("savedCommuteResults");
 
 const routeMapContainer = document.getElementById("routeMap");
 const routeMapCanvas = document.getElementById("routeMapCanvas");
@@ -126,10 +127,156 @@ const toggleKeyVisibilityBtn = document.getElementById("toggleKeyVisibility");
 const clearKeyBtn = document.getElementById("clearKey");
 const keyHelpText = document.getElementById("key-help");
 const proxyTemplateInput = document.getElementById("proxyTemplate");
+const saveRouteFavoriteBtn = document.getElementById("saveRouteFavorite");
+const saveStopFavoriteBtn = document.getElementById("saveStopFavorite");
 
 const storageKey = "thebus-api-key";
 const rememberKeyStorageKey = "thebus-remember-key";
 const proxyTemplateStorageKey = "thebus-proxy-template";
+const savedCommutesStorageKey = "findabus-saved-commutes";
+
+
+function getSavedCommutes() {
+  try {
+    const saved = window.localStorage.getItem(savedCommutesStorageKey);
+    const parsed = JSON.parse(saved || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveCommuteItems(items) {
+  try {
+    window.localStorage.setItem(savedCommutesStorageKey, JSON.stringify(items));
+  } catch (error) {
+    // Silently fail if localStorage is unavailable
+  }
+}
+
+function buildSavedCommuteId(type, value, secondary = "") {
+  return `${type}:${String(value).trim().toLowerCase()}:${String(secondary).trim().toLowerCase()}`;
+}
+
+function createSavedCommute(type, payload) {
+  if (type === "stop") {
+    const stopNumber = String(payload.stop || "").trim();
+    if (!stopNumber) {
+      return null;
+    }
+    return {
+      id: buildSavedCommuteId("stop", stopNumber),
+      type: "stop",
+      stop: stopNumber,
+      label: `Stop ${stopNumber}`,
+      createdAt: Date.now()
+    };
+  }
+
+  const routeNumber = String(payload.route || "").trim();
+  if (!routeNumber) {
+    return null;
+  }
+  const headsign = String(payload.headsign || "").trim();
+  return {
+    id: buildSavedCommuteId("route", routeNumber, headsign),
+    type: "route",
+    route: routeNumber,
+    headsign,
+    label: headsign ? `Route ${routeNumber} (${headsign})` : `Route ${routeNumber}`,
+    createdAt: Date.now()
+  };
+}
+
+function removeSavedCommute(id) {
+  const nextItems = getSavedCommutes().filter((item) => item.id !== id);
+  saveCommuteItems(nextItems);
+  renderSavedCommutes();
+}
+
+function loadSavedCommute(item) {
+  if (item.type === "stop") {
+    const stopInput = document.getElementById("stopNumber");
+    if (stopInput) {
+      stopInput.value = item.stop;
+    }
+    arrivalsForm?.requestSubmit();
+    document.querySelector("#arrivals-title")?.closest(".panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  const routeInput = document.getElementById("routeNumber");
+  const headsignInput = document.getElementById("routeHeadsign");
+  if (routeInput) {
+    routeInput.value = item.route;
+  }
+  if (headsignInput) {
+    headsignInput.value = item.headsign || "";
+  }
+  routeForm?.requestSubmit();
+  document.querySelector("#routes-title")?.closest(".panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderSavedCommutes() {
+  if (!savedCommuteResults) {
+    return;
+  }
+
+  const items = getSavedCommutes().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  savedCommuteResults.replaceChildren();
+
+  if (items.length === 0) {
+    renderMessage(savedCommuteResults, "No saved commute shortcuts yet. Save a stop or route to get started.");
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "card saved-commute-card";
+
+    const title = document.createElement("h3");
+    title.textContent = item.label;
+
+    const meta = document.createElement("p");
+    meta.className = "saved-commute-meta";
+    meta.textContent = item.type === "stop"
+      ? "Quickly check arrivals for this stop"
+      : "Quickly rerun this route search";
+
+    const actions = document.createElement("div");
+    actions.className = "saved-commute-actions";
+
+    const loadButton = document.createElement("button");
+    loadButton.type = "button";
+    loadButton.className = "btn";
+    loadButton.textContent = item.type === "stop" ? "Check arrivals" : "Search route";
+    loadButton.addEventListener("click", () => loadSavedCommute(item));
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "btn btn-secondary";
+    removeButton.textContent = "Remove";
+    removeButton.addEventListener("click", () => removeSavedCommute(item.id));
+
+    actions.append(loadButton, removeButton);
+    card.append(title, meta, actions);
+    savedCommuteResults.append(card);
+  });
+}
+
+function addSavedCommute(type, payload) {
+  const commute = createSavedCommute(type, payload);
+  if (!commute) {
+    const target = type === "stop" ? arrivalsResults : routeResults;
+    renderMessage(target, type === "stop" ? "Enter a stop number before saving." : "Enter a route number before saving.", "error-state");
+    return;
+  }
+
+  const existing = getSavedCommutes();
+  const withoutDuplicate = existing.filter((item) => item.id !== commute.id);
+  saveCommuteItems([commute, ...withoutDuplicate].slice(0, 12));
+  renderSavedCommutes();
+}
 
 // Storage abstraction - use sessionStorage by default, localStorage if "remember" is checked
 function getStorage() {
@@ -984,6 +1131,24 @@ if (toggleStopsBtn) {
 if (findNearbyBtn) {
   findNearbyBtn.addEventListener('click', findNearbyStops);
 }
+
+
+if (saveRouteFavoriteBtn) {
+  saveRouteFavoriteBtn.addEventListener("click", () => {
+    const routeNumber = document.getElementById("routeNumber")?.value || "";
+    const routeHeadsign = document.getElementById("routeHeadsign")?.value || "";
+    addSavedCommute("route", { route: routeNumber, headsign: routeHeadsign });
+  });
+}
+
+if (saveStopFavoriteBtn) {
+  saveStopFavoriteBtn.addEventListener("click", () => {
+    const stopNumber = document.getElementById("stopNumber")?.value || "";
+    addSavedCommute("stop", { stop: stopNumber });
+  });
+}
+
+renderSavedCommutes();
 
 function renderLoading(container) {
   container.replaceChildren();

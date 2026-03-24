@@ -357,6 +357,28 @@ dl {
   gap: 0.65rem;
 }
 
+
+.saved-commute-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.saved-commute-meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.saved-commute-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.saved-commute-actions .btn {
+  width: auto;
+}
+
 .panel--info {
   background: var(--color-surface-elevated);
   border-color: var(--color-border);
