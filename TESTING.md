@@ -75,7 +75,8 @@ tests/
 ├── vehicle-tracking.spec.js  # Vehicle tracking functionality
 ├── stops-map.spec.js         # All stops map with clustering
 ├── arrivals.spec.js          # Stop arrivals lookup
-└── page-structure.spec.js    # Overall page layout and structure
+├── page-structure.spec.js    # Overall page layout and structure
+└── theme-toggle.spec.js      # Theme accessibility and persistence
 ```
 
 ### Test Coverage
@@ -89,7 +90,7 @@ tests/
 - ✅ Dynamic help text based on storage mode
 - ✅ Key persistence across page reloads
 
-**Total Tests:** 8
+**Total Tests:** 10
 
 #### 2. Route Search (`route-search.spec.js`)
 - ✅ Form display and field validation
@@ -151,7 +152,13 @@ tests/
 
 **Total Tests:** 19
 
-**Total Test Suite: 69 tests**
+#### 7. Theme Toggle (`theme-toggle.spec.js`)
+- ✅ Theme toggle label/icon updates
+- ✅ Theme attribute updates on document root
+
+**Total Tests:** 1
+
+**Total Test Suite: 80+ tests**
 
 ## Browser Coverage
 

@@ -91,6 +91,20 @@
             <input type="checkbox" id="rememberKey" />
             <span>Remember my key (stores permanently in browser)</span>
           </label>
+
+          <label class="input-group" for="proxyTemplate">
+            <span>Proxy Template (optional)</span>
+            <input
+              id="proxyTemplate"
+              type="text"
+              autocomplete="off"
+              placeholder="https://your-proxy.example/?url={url}"
+              aria-describedby="proxy-help"
+            />
+          </label>
+          <small id="proxy-help" class="help-text">
+            Optional for GitHub Pages/CORS. Use your own proxy and include {url} (encoded) or {url_raw} in the template.
+          </small>
         </div>
       </div>
     </header>
