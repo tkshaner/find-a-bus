@@ -125,6 +125,14 @@
         <div id="stopsMessage" class="info-message" style="display: none;"></div>
       </section>
 
+      <section class="panel" aria-labelledby="saved-commute-title">
+        <div class="panel__header">
+          <h2 id="saved-commute-title">Saved Commute</h2>
+          <p>Save your frequent stops and route searches for one-click access.</p>
+        </div>
+        <div id="savedCommuteResults" class="results" role="status" aria-live="polite"></div>
+      </section>
+
       <section class="panel" aria-labelledby="routes-title">
         <div class="panel__header">
           <h2 id="routes-title">Find Routes</h2>
@@ -140,6 +148,7 @@
             <input id="routeHeadsign" name="headsign" type="text" placeholder="e.g. HAWAII KAI" />
           </label>
           <button type="submit" class="btn">Search Routes</button>
+          <button type="button" id="saveRouteFavorite" class="btn btn-secondary">Save Route</button>
         </form>
         <div id="routeVariantSelector" style="display: none; margin: 1rem 0;">
           <label class="input-group" for="variantSelect">
@@ -184,6 +193,7 @@
             <input id="stopNumber" name="stop" type="text" placeholder="e.g. 1" required />
           </label>
           <button type="submit" class="btn">View Arrivals</button>
+          <button type="button" id="saveStopFavorite" class="btn btn-secondary">Save Stop</button>
         </form>
         <div id="arrivalsResults" class="results" role="status" aria-live="polite"></div>
       </section>

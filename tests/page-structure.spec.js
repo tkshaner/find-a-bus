@@ -67,6 +67,12 @@ test.describe('Page Structure and Layout', () => {
     });
     await expect(stopsSection).toBeVisible();
 
+    // Saved commute section
+    const savedCommuteSection = page.locator('section').filter({
+      has: page.locator('#saved-commute-title')
+    });
+    await expect(savedCommuteSection).toBeVisible();
+
     // Routes section
     const routesSection = page.locator('section').filter({
       has: page.locator('#routes-title')
@@ -84,6 +90,13 @@ test.describe('Page Structure and Layout', () => {
       has: page.locator('#arrivals-title')
     });
     await expect(arrivalsSection).toBeVisible();
+  });
+
+
+
+  test('should have save buttons for route and stop shortcuts', async ({ page }) => {
+    await expect(page.locator('#saveRouteFavorite')).toBeVisible();
+    await expect(page.locator('#saveStopFavorite')).toBeVisible();
   });
 
   test('should have usage tips section', async ({ page }) => {
