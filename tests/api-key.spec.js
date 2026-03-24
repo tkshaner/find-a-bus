@@ -39,10 +39,10 @@ test.describe('API Key Management', () => {
     await apiKeyInput.fill(testKey);
     await apiKeyInput.blur(); // Trigger storage
 
-    const storedKey = await page.evaluate(() => sessionStorage.getItem('find-a-bus-api-key'));
+    const storedKey = await page.evaluate(() => sessionStorage.getItem('thebus-api-key'));
     expect(storedKey).toBe(testKey);
 
-    const localStorageKey = await page.evaluate(() => localStorage.getItem('find-a-bus-api-key'));
+    const localStorageKey = await page.evaluate(() => localStorage.getItem('thebus-api-key'));
     expect(localStorageKey).toBeNull();
   });
 
@@ -55,7 +55,7 @@ test.describe('API Key Management', () => {
     await apiKeyInput.fill(testKey);
     await apiKeyInput.blur();
 
-    const storedKey = await page.evaluate(() => localStorage.getItem('find-a-bus-api-key'));
+    const storedKey = await page.evaluate(() => localStorage.getItem('thebus-api-key'));
     expect(storedKey).toBe(testKey);
   });
 
@@ -66,8 +66,8 @@ test.describe('API Key Management', () => {
 
     // Store key in both storages
     await page.evaluate((key) => {
-      sessionStorage.setItem('find-a-bus-api-key', key);
-      localStorage.setItem('find-a-bus-api-key', key);
+      sessionStorage.setItem('thebus-api-key', key);
+      localStorage.setItem('thebus-api-key', key);
     }, testKey);
 
     // Fill input to show it has value
@@ -80,8 +80,8 @@ test.describe('API Key Management', () => {
     await expect(apiKeyInput).toHaveValue('');
 
     // Check both storages are cleared
-    const sessionKey = await page.evaluate(() => sessionStorage.getItem('find-a-bus-api-key'));
-    const localKey = await page.evaluate(() => localStorage.getItem('find-a-bus-api-key'));
+    const sessionKey = await page.evaluate(() => sessionStorage.getItem('thebus-api-key'));
+    const localKey = await page.evaluate(() => localStorage.getItem('thebus-api-key'));
     expect(sessionKey).toBeNull();
     expect(localKey).toBeNull();
   });
@@ -124,5 +124,22 @@ test.describe('API Key Management', () => {
 
     // Check key is still there
     await expect(apiKeyInput).toHaveValue(testKey);
+  });
+
+  test('should display optional proxy template input', async ({ page }) => {
+    const proxyTemplate = page.locator('#proxyTemplate');
+    await expect(proxyTemplate).toBeVisible();
+    await expect(proxyTemplate).toHaveAttribute('placeholder');
+  });
+
+  test('should persist proxy template in localStorage', async ({ page }) => {
+    const value = 'https://proxy.example/?url={url}';
+    const proxyTemplate = page.locator('#proxyTemplate');
+
+    await proxyTemplate.fill(value);
+    await proxyTemplate.blur();
+
+    const stored = await page.evaluate(() => localStorage.getItem('thebus-proxy-template'));
+    expect(stored).toBe(value);
   });
 });

@@ -1,23 +1,5 @@
 const apiBase = "https://api.thebus.org";
 
-const corsProxies = [
-  {
-    name: "cors.isomorphic-git",
-    buildUrl: (url) => `https://cors.isomorphic-git.org/${url}`,
-    headers: {}
-  },
-  {
-    name: "corsproxy.io",
-    buildUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    headers: {}
-  },
-  {
-    name: "allorigins",
-    buildUrl: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    headers: {}
-  }
-];
-
 function shouldForceProxyRequests() {
   if (typeof window === "undefined" || !window.location) {
     return false;
@@ -143,9 +125,11 @@ const rememberKeyCheckbox = document.getElementById("rememberKey");
 const toggleKeyVisibilityBtn = document.getElementById("toggleKeyVisibility");
 const clearKeyBtn = document.getElementById("clearKey");
 const keyHelpText = document.getElementById("key-help");
+const proxyTemplateInput = document.getElementById("proxyTemplate");
 
 const storageKey = "thebus-api-key";
 const rememberKeyStorageKey = "thebus-remember-key";
+const proxyTemplateStorageKey = "thebus-proxy-template";
 
 // Storage abstraction - use sessionStorage by default, localStorage if "remember" is checked
 function getStorage() {
@@ -175,6 +159,22 @@ function setRememberPreference(remember) {
   } catch (error) {
     // Silently fail if localStorage is disabled
   }
+}
+
+function getProxyTemplate() {
+  try {
+    return window.localStorage.getItem(proxyTemplateStorageKey) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function isValidProxyTemplate(template) {
+  const trimmed = String(template || "").trim();
+  if (!trimmed) {
+    return true;
+  }
+  return trimmed.includes("{url}") || trimmed.includes("{url_raw}");
 }
 
 // Validate API key format (basic validation)
@@ -211,6 +211,10 @@ if (apiKeyInput) {
   // Set checkbox state
   if (rememberKeyCheckbox) {
     rememberKeyCheckbox.checked = remember;
+  }
+
+  if (proxyTemplateInput) {
+    proxyTemplateInput.value = getProxyTemplate();
   }
 
   // Load saved key if it exists
@@ -272,6 +276,26 @@ if (apiKeyInput) {
       }
 
       updateHelpText();
+    });
+  }
+
+  if (proxyTemplateInput) {
+    proxyTemplateInput.addEventListener("input", (event) => {
+      const template = event.target.value.trim();
+      if (!isValidProxyTemplate(template)) {
+        proxyTemplateInput.setCustomValidity("Proxy template must include {url} or {url_raw}");
+      } else {
+        proxyTemplateInput.setCustomValidity("");
+      }
+      try {
+        if (template) {
+          window.localStorage.setItem(proxyTemplateStorageKey, template);
+        } else {
+          window.localStorage.removeItem(proxyTemplateStorageKey);
+        }
+      } catch (error) {
+        // Silently fail if localStorage is disabled
+      }
     });
   }
 
@@ -1032,16 +1056,21 @@ function renderCard(container, template, data) {
   container.append(card);
 }
 
-function createProxyUrl(url, proxyIndex = 0) {
-  const proxy = corsProxies[proxyIndex];
-  if (!proxy) {
-    throw new Error("Invalid proxy index");
+function createProxyUrl(url) {
+  const template = getProxyTemplate().trim();
+  if (!template) {
+    throw new Error("Proxy template is not configured");
   }
-  return proxy.buildUrl(url);
+  if (!isValidProxyTemplate(template)) {
+    throw new Error("Proxy template must include {url} or {url_raw}");
+  }
+  return template
+    .replaceAll("{url}", encodeURIComponent(url))
+    .replaceAll("{url_raw}", url);
 }
 
-function getProxyHeaders(proxyIndex = 0) {
-  return { ...(corsProxies[proxyIndex]?.headers || {}) };
+function getProxyHeaders() {
+  return {};
 }
 
 // Parse XML vehicle response and convert to JSON format
@@ -1076,13 +1105,13 @@ function parseVehicleXML(xmlString) {
   };
 }
 
-async function fetchJson(url, { useProxy = false, proxyIndex = 0 } = {}) {
+async function fetchJson(url, { useProxy = false } = {}) {
   const headers = { Accept: "application/json" };
   let targetUrl = url;
 
   if (useProxy) {
-    targetUrl = createProxyUrl(url, proxyIndex);
-    Object.assign(headers, getProxyHeaders(proxyIndex));
+    targetUrl = createProxyUrl(url);
+    Object.assign(headers, getProxyHeaders());
   }
 
   const response = await fetch(targetUrl, { headers });
@@ -1137,6 +1166,11 @@ async function fetchFromApi(path, params = {}) {
   }
 
   const forceProxyRequests = shouldForceProxyRequests();
+  const proxyTemplate = getProxyTemplate().trim();
+  const hasProxyTemplate = proxyTemplate.length > 0;
+  if (hasProxyTemplate && !isValidProxyTemplate(proxyTemplate)) {
+    throw new Error("Proxy template must include {url} or {url_raw}.");
+  }
   const skipDirectFetchError = new Error("Skip direct fetch");
   skipDirectFetchError.name = "SkipDirectFetchError";
 
@@ -1155,7 +1189,7 @@ async function fetchFromApi(path, params = {}) {
 
   try {
     if (isVehicleEndpoint) {
-      if (forceProxyRequests) {
+      if (forceProxyRequests && hasProxyTemplate) {
         throw skipDirectFetchError;
       }
       // Fetch XML for vehicle endpoint
@@ -1166,7 +1200,7 @@ async function fetchFromApi(path, params = {}) {
       const xmlText = await response.text();
       return parseVehicleXML(xmlText);
     } else {
-      if (forceProxyRequests) {
+      if (forceProxyRequests && hasProxyTemplate) {
         throw skipDirectFetchError;
       }
       // Fetch JSON for other endpoints
@@ -1182,44 +1216,46 @@ async function fetchFromApi(path, params = {}) {
       throw error;
     }
 
-    // For vehicle endpoint, retry with proxy chain on any error (likely CORS)
-    if (isVehicleEndpoint) {
-      for (let proxyIndex = 0; proxyIndex < corsProxies.length; proxyIndex += 1) {
-        try {
-          const proxyUrl = createProxyUrl(url.toString(), proxyIndex);
-          const headers = {
-            "X-Requested-With": "find-a-bus",
-            ...getProxyHeaders(proxyIndex)
-          };
-          const response = await fetch(proxyUrl, { headers });
-          if (!response.ok) {
-            throw new Error(`Request failed via proxy (${response.status})`);
-          }
-          const xmlText = await response.text();
-          return parseVehicleXML(xmlText);
-        } catch (proxyError) {
-          // Try next proxy in chain
-        }
+    if (!hasProxyTemplate) {
+      if (forceProxyRequests || shouldRetryWithProxy(error)) {
+        throw new Error(
+          "Request blocked by CORS. Configure the optional proxy template with your own proxy URL to continue."
+        );
       }
-
-      throw new Error("Unable to fetch vehicle data. Please try again later.");
+      throw error;
     }
 
-    // Retry JSON endpoints with proxy
-    let lastProxyError = null;
-    for (let proxyIndex = 0; proxyIndex < corsProxies.length; proxyIndex += 1) {
+    // For vehicle endpoint, retry with configured proxy on any error (likely CORS)
+    if (isVehicleEndpoint) {
       try {
-        const data = await fetchJson(url.toString(), {
-          useProxy: true,
-          proxyIndex
-        });
-        if (data.errorMessage) {
-          throw new Error(data.errorMessage);
+        const proxyUrl = createProxyUrl(url.toString());
+        const headers = {
+          "X-Requested-With": "find-a-bus",
+          ...getProxyHeaders()
+        };
+        const response = await fetch(proxyUrl, { headers });
+        if (!response.ok) {
+          throw new Error(`Request failed via proxy (${response.status})`);
         }
-        return data;
+        const xmlText = await response.text();
+        return parseVehicleXML(xmlText);
       } catch (proxyError) {
-        lastProxyError = proxyError;
+        throw new Error("Unable to fetch vehicle data using the configured proxy.");
       }
+    }
+
+    // Retry JSON endpoints with configured proxy
+    let lastProxyError = null;
+    try {
+      const data = await fetchJson(url.toString(), {
+        useProxy: true
+      });
+      if (data.errorMessage) {
+        throw new Error(data.errorMessage);
+      }
+      return data;
+    } catch (proxyError) {
+      lastProxyError = proxyError;
     }
 
     if (lastProxyError?.name === "JsonParseError") {

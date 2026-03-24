@@ -15,6 +15,7 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 - Enter your TheBus API key in the banner at the top of the page.
 - If you do not yet have a key, request one for free from the [TheBus developer portal](https://www.honolulutransit.org/).
 - **Security:** By default, your key is stored in `sessionStorage` and cleared when you close your browser tab. Check "Remember my key" to store it permanently in `localStorage`.
+- **Optional proxy template:** If your deployment (such as GitHub Pages) hits CORS restrictions, provide your own proxy template URL in the UI, such as `https://your-proxy.example/?url={url}`.
 - **Important:** Only use free developer API keys. Never enter production or paid API keys into this application.
 
 ### 3. Explore transit data
@@ -23,7 +24,7 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 - **Vehicles panel:** Enter a fleet number to see the vehicle's latest reported position and status.
 - **Arrivals panel:** Provide a stop number to view upcoming arrivals, including direction and schedule adherence.
 
-> **Tip:** If the browser blocks requests to `https://api.thebus.org` because of CORS, proxy the API through a server you control. The app automatically retries with a proxy-compatible URL when it detects parse or network errors.
+> **Tip:** If the browser blocks requests to `https://api.thebus.org` because of CORS, configure the optional proxy template with a server you control. The app does **not** use public third-party fallback proxies.
 
 ## Deploying to GitHub Pages
 
@@ -59,13 +60,14 @@ Because the project is a static site, you can deploy it to GitHub Pages without 
 ├── TESTING.md                # Test documentation and guide
 ├── package.json              # Node.js dependencies for testing
 ├── playwright.config.js      # Playwright test configuration
-└── tests/                    # Playwright test suite (69 tests)
+└── tests/                    # Playwright test suite (80+ tests)
     ├── api-key.spec.js
     ├── route-search.spec.js
     ├── vehicle-tracking.spec.js
     ├── stops-map.spec.js
     ├── arrivals.spec.js
-    └── page-structure.spec.js
+    ├── page-structure.spec.js
+    └── theme-toggle.spec.js
 ```
 
 ## Security considerations
@@ -86,6 +88,7 @@ Because this is a client-side only application hosted on GitHub Pages:
 - JavaScript on the page can access stored keys
 - Browser extensions may be able to access stored keys
 - There is no server-side protection or encryption
+- If you configure a proxy template, your proxy service can see API requests (including the key query parameter)
 
 ### Best practices
 
@@ -107,7 +110,7 @@ If you need production-grade security, consider implementing a backend proxy ser
 
 ## Testing
 
-This project includes a comprehensive Playwright test suite with **69 automated tests** covering all major functionality across multiple browsers and devices.
+This project includes a comprehensive Playwright test suite with **80+ automated tests** covering all major functionality across multiple browsers and devices.
 
 ### Quick Start
 
