@@ -15,7 +15,7 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 - Enter your TheBus API key in the banner at the top of the page.
 - If you do not yet have a key, request one for free from the [TheBus developer portal](https://www.honolulutransit.org/).
 - **Security:** By default, your key is stored in `sessionStorage` and cleared when you close your browser tab. Check "Remember my key" to store it permanently in `localStorage`.
-- **Optional proxy template:** If your deployment (such as GitHub Pages) hits CORS restrictions, provide your own proxy template URL in the UI, such as `https://your-proxy.example/?url={url}`.
+- **Optional proxy template:** If your deployment (such as GitHub Pages) hits CORS restrictions, provide your own proxy template URL in the UI, such as `https://your-proxy.example/?url={url}` or `https://your-worker.workers.dev/?url={url}`.
 - **Important:** Only use free developer API keys. Never enter production or paid API keys into this application.
 
 ### 3. Explore transit data
