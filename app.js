@@ -1,4 +1,5 @@
 const apiBase = "https://api.thebus.org";
+const proxyConfigErrorMessage = "Request blocked by CORS. Add your proxy template in “Advanced API settings” (example: https://your-worker.workers.dev/?url={url}) and try again.";
 
 function shouldForceProxyRequests() {
   if (typeof window === "undefined" || !window.location) {
@@ -1383,9 +1384,7 @@ async function fetchFromApi(path, params = {}) {
 
     if (!hasProxyTemplate) {
       if (forceProxyRequests || shouldRetryWithProxy(error)) {
-        throw new Error(
-          "Request blocked by CORS. Configure the optional proxy template with your own proxy URL to continue."
-        );
+        throw new Error(proxyConfigErrorMessage);
       }
       throw error;
     }
