@@ -460,7 +460,7 @@ footer {
 
 @media (max-width: 720px) {
   .hero {
-    padding: 2.75rem 1rem 2.25rem;
+    padding: 2rem 1rem 1.5rem;
   }
 
   .hero__toolbar {
@@ -477,11 +477,40 @@ footer {
   }
 
   main {
-    padding: 0 1rem 3rem;
+    gap: 1.5rem;
+    padding: 0 1rem 2rem;
   }
 
   .panel {
-    padding: 1.75rem;
+    padding: 1.35rem;
+  }
+
+  .panel__header h2 {
+    font-size: 1.7rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  .form-grid {
+    margin: 1.25rem 0 1rem;
+  }
+
+  .map-container {
+    margin: 1rem 0;
+  }
+
+  .security-notice {
+    margin: 1.25rem 0 1rem;
+  }
+
+  .api-key-container {
+    margin-top: 1.25rem;
+  }
+
+  footer {
+    padding: 1.25rem 0 2rem;
   }
 
   .btn {
@@ -504,19 +533,53 @@ footer {
 
 @media (max-width: 520px) {
   .hero {
-    padding: 2.25rem 1rem 2rem;
+    padding: 1.5rem 0.75rem 1.25rem;
   }
 
   .hero__toolbar {
     margin-bottom: 1rem;
   }
 
+  main {
+    gap: 1.15rem;
+    padding: 0 0.75rem 1.5rem;
+  }
+
   .panel {
-    padding: 1.5rem;
+    padding: 1.1rem;
+    box-shadow: 4px 4px 0 0 var(--color-shadow);
   }
 
   .panel__header h2 {
-    font-size: 1.6rem;
+    font-size: 1.45rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .form-grid {
+    margin: 1rem 0 0.75rem;
+  }
+
+  .map-container {
+    margin: 0.75rem 0;
+  }
+
+  .map-controls {
+    margin: 0.75rem 0;
+  }
+
+  .security-notice {
+    margin: 1rem 0 0.75rem;
+  }
+
+  .api-key-container {
+    margin-top: 1rem;
+  }
+
+  footer {
+    padding: 1rem 0 1.5rem;
   }
 
   .checkbox-group {
