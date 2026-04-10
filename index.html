@@ -92,6 +92,14 @@
             <span>Remember my key (stores permanently in browser)</span>
           </label>
 
+          <label class="checkbox-group">
+            <input type="checkbox" id="usePublicProxy" />
+            <span>Use public CORS proxy</span>
+          </label>
+          <small id="public-proxy-help" class="help-text">
+            Routes requests through <strong>corsproxy.io</strong> to avoid CORS issues. Convenient but may be slower or rate-limited. For production use, consider your own proxy.
+          </small>
+
           <label class="input-group" for="proxyTemplate">
             <span>Proxy Template (optional)</span>
             <input

@@ -128,12 +128,15 @@ const toggleKeyVisibilityBtn = document.getElementById("toggleKeyVisibility");
 const clearKeyBtn = document.getElementById("clearKey");
 const keyHelpText = document.getElementById("key-help");
 const proxyTemplateInput = document.getElementById("proxyTemplate");
+const usePublicProxyCheckbox = document.getElementById("usePublicProxy");
 const saveRouteFavoriteBtn = document.getElementById("saveRouteFavorite");
 const saveStopFavoriteBtn = document.getElementById("saveStopFavorite");
 
 const storageKey = "thebus-api-key";
 const rememberKeyStorageKey = "thebus-remember-key";
 const proxyTemplateStorageKey = "thebus-proxy-template";
+const usePublicProxyStorageKey = "thebus-use-public-proxy";
+const publicProxyTemplate = "https://corsproxy.io/?url={url}";
 const savedCommutesStorageKey = "findabus-saved-commutes";
 
 
@@ -309,8 +312,19 @@ function setRememberPreference(remember) {
   }
 }
 
+function isPublicProxyEnabled() {
+  try {
+    return window.localStorage.getItem(usePublicProxyStorageKey) === "true";
+  } catch (error) {
+    return false;
+  }
+}
+
 function getProxyTemplate() {
   try {
+    if (isPublicProxyEnabled()) {
+      return publicProxyTemplate;
+    }
     return window.localStorage.getItem(proxyTemplateStorageKey) || "";
   } catch (error) {
     return "";
@@ -361,8 +375,16 @@ if (apiKeyInput) {
     rememberKeyCheckbox.checked = remember;
   }
 
+  if (usePublicProxyCheckbox) {
+    const publicProxyEnabled = isPublicProxyEnabled();
+    usePublicProxyCheckbox.checked = publicProxyEnabled;
+    if (proxyTemplateInput) {
+      proxyTemplateInput.disabled = publicProxyEnabled;
+    }
+  }
+
   if (proxyTemplateInput) {
-    proxyTemplateInput.value = getProxyTemplate();
+    proxyTemplateInput.value = isPublicProxyEnabled() ? "" : (window.localStorage.getItem(proxyTemplateStorageKey) || "");
   }
 
   // Load saved key if it exists
@@ -443,6 +465,29 @@ if (apiKeyInput) {
         }
       } catch (error) {
         // Silently fail if localStorage is disabled
+      }
+    });
+  }
+
+  if (usePublicProxyCheckbox) {
+    usePublicProxyCheckbox.addEventListener("change", (event) => {
+      const enabled = event.target.checked;
+      try {
+        if (enabled) {
+          window.localStorage.setItem(usePublicProxyStorageKey, "true");
+        } else {
+          window.localStorage.removeItem(usePublicProxyStorageKey);
+        }
+      } catch (error) {
+        // Silently fail if localStorage is disabled
+      }
+      if (proxyTemplateInput) {
+        proxyTemplateInput.disabled = enabled;
+        if (enabled) {
+          proxyTemplateInput.value = "";
+        } else {
+          proxyTemplateInput.value = window.localStorage.getItem(proxyTemplateStorageKey) || "";
+        }
       }
     });
   }
