@@ -56,7 +56,8 @@ test.describe('Vehicle Tracking', () => {
       'last_message',
       'latitude',
       'longitude',
-      'trip'
+      'trip',
+      'trip_details'
     ];
 
     for (const field of fields) {
