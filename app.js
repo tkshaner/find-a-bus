@@ -1211,6 +1211,43 @@ function renderMessage(container, message, className = "empty-state") {
   container.append(div);
 }
 
+function createRouteSearchLink(label, route, headsign = "") {
+  const normalizedRoute = String(route || "").trim();
+  if (!normalizedRoute) {
+    return null;
+  }
+
+  const normalizedHeadsign = String(headsign || "").trim();
+  const link = document.createElement("a");
+  link.href = "#routes-title";
+  link.textContent = label;
+  link.setAttribute(
+    "aria-label",
+    normalizedHeadsign
+      ? `View route ${normalizedRoute} with headsign ${normalizedHeadsign}`
+      : `View route ${normalizedRoute}`
+  );
+
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+
+    const routeInput = document.getElementById("routeNumber");
+    const headsignInput = document.getElementById("routeHeadsign");
+    if (routeInput) {
+      routeInput.value = normalizedRoute;
+    }
+    if (headsignInput) {
+      headsignInput.value = normalizedHeadsign;
+    }
+
+    const routeSection = document.querySelector("#routes-title")?.closest(".panel");
+    routeSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+    routeForm?.requestSubmit();
+  });
+
+  return link;
+}
+
 function renderCard(container, template, data) {
   const card = template.content.cloneNode(true);
   card.querySelectorAll("[data-field]").forEach((node) => {
@@ -1254,6 +1291,17 @@ function renderCard(container, template, data) {
       });
       node.replaceChildren(link);
       didSetCustomValue = true;
+    }
+
+    if ((key === "route_short_name" || key === "headsign") && value !== undefined && value !== null && value !== "") {
+      const routeValue = data.route_short_name;
+      const headsignValue = data.headsign;
+      const routeSearchLink = createRouteSearchLink(String(value), routeValue, headsignValue);
+
+      if (routeSearchLink) {
+        node.replaceChildren(routeSearchLink);
+        didSetCustomValue = true;
+      }
     }
 
     if (value === undefined || value === null || value === "") {

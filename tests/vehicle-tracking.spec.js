@@ -103,4 +103,67 @@ test.describe('Vehicle Tracking', () => {
     });
     expect(leafletLoaded).toBeTruthy();
   });
+
+  test('should link vehicle route and headsign to route search', async ({ page }) => {
+    await page.route('**/vehicle/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/xml',
+        body: `<?xml version="1.0" encoding="UTF-8"?>
+          <response>
+            <timestamp>2026-04-17T00:00:00Z</timestamp>
+            <vehicle>
+              <number>249</number>
+              <route_short_name>2</route_short_name>
+              <headsign>SCHOOL ST-MIDDLE</headsign>
+              <latitude>21.3099</latitude>
+              <longitude>-157.8581</longitude>
+            </vehicle>
+          </response>`
+      });
+    });
+
+    await page.route('**/trip/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ trip: [{ route: '2', headsign: 'SCHOOL ST-MIDDLE' }] })
+      });
+    });
+
+    let routeSearchCount = 0;
+    await page.route('**/routeJSON/**', async (route) => {
+      routeSearchCount += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          route: [
+            {
+              routeNum: '2',
+              headsign: 'SCHOOL ST-MIDDLE',
+              firstStop: 'ALAPAI TRANSIT CENTER',
+              shapeID: 'shape-1'
+            }
+          ]
+        })
+      });
+    });
+
+    await page.fill('#apiKey', 'test-key-12345');
+    await page.fill('#vehicleNumber', '249');
+    await page.click('#vehicleForm button[type="submit"]');
+
+    const routeLink = page.locator('#vehicleResults [data-field="route_short_name"] a');
+    const headsignLink = page.locator('#vehicleResults [data-field="headsign"] a');
+    await expect(routeLink).toBeVisible();
+    await expect(headsignLink).toBeVisible();
+
+    await routeLink.click();
+
+    await expect(page.locator('#routeNumber')).toHaveValue('2');
+    await expect(page.locator('#routeHeadsign')).toHaveValue('SCHOOL ST-MIDDLE');
+    await expect(page.locator('#routeResults .card')).toBeVisible();
+    expect(routeSearchCount).toBe(1);
+  });
 });
