@@ -1316,6 +1316,57 @@ function parseVehicleXML(xmlString) {
   };
 }
 
+function buildTripDetailsSummary(tripId, tripInfo) {
+  if (!tripInfo || typeof tripInfo !== "object") {
+    return tripId ? `Trip ${tripId}` : "—";
+  }
+
+  const details = [];
+  const headsign = tripInfo.headsign || tripInfo.trip_headsign || tripInfo.trip_headsign_short;
+  const route = tripInfo.route || tripInfo.routeNum || tripInfo.route_short_name || tripInfo.route_id;
+  const direction = tripInfo.direction || tripInfo.direction_id;
+  const service = tripInfo.service_id || tripInfo.service;
+
+  if (route) {
+    details.push(`Route ${route}`);
+  }
+  if (headsign) {
+    details.push(headsign);
+  }
+  if (direction !== undefined && direction !== null && direction !== "") {
+    details.push(`Dir ${direction}`);
+  }
+  if (service) {
+    details.push(`Service ${service}`);
+  }
+
+  if (details.length === 0) {
+    return tripId ? `Trip ${tripId}` : "—";
+  }
+
+  return tripId ? `Trip ${tripId}: ${details.join(" • ")}` : details.join(" • ");
+}
+
+async function enrichVehiclesWithTripDetails(vehicles) {
+  return Promise.all(vehicles.map(async ({ vehicle }) => {
+    const normalizedVehicle = vehicle ?? {};
+    const tripId = normalizedVehicle.trip;
+
+    if (!tripId) {
+      return { vehicle: { ...normalizedVehicle, trip_details: "—" } };
+    }
+
+    try {
+      const tripData = await fetchFromApi("/trip/", { trip: tripId });
+      const tripInfo = Array.isArray(tripData?.trip) ? tripData.trip[0] : tripData?.trip;
+      const tripDetails = buildTripDetailsSummary(tripId, tripInfo);
+      return { vehicle: { ...normalizedVehicle, trip_details: tripDetails } };
+    } catch (error) {
+      return { vehicle: { ...normalizedVehicle, trip_details: `Trip ${tripId} (details unavailable)` } };
+    }
+  }));
+}
+
 async function fetchJson(url, { useProxy = false } = {}) {
   const headers = { Accept: "application/json" };
   let targetUrl = url;
@@ -1611,7 +1662,7 @@ vehicleForm?.addEventListener("submit", async (event) => {
   try {
     // Note: /vehicle endpoint returns XML, not JSON
     const data = await fetchFromApi("/vehicle/", { num });
-    const vehicles = data.vehicles ?? [];
+    const vehicles = await enrichVehiclesWithTripDetails(data.vehicles ?? []);
 
     if (vehicles.length === 0) {
       renderMessage(vehicleResults, "No vehicle data available. Check the vehicle number and try again.");
