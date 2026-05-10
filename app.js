@@ -357,7 +357,7 @@ function validateApiKey(key) {
   }
 
   // Check for common placeholder values
-  const placeholders = ['your-api-key', 'api-key-here', 'enter-key', 'test', 'demo'];
+  const placeholders = ['your-api-key', 'api-key-here', 'enter-key', 'demo'];
   if (placeholders.some(p => trimmedKey.toLowerCase().includes(p))) {
     return { valid: false, message: "Please enter a valid API key" };
   }
@@ -1249,7 +1249,9 @@ function createRouteSearchLink(label, route, headsign = "") {
 }
 
 function renderCard(container, template, data) {
-  const card = template.content.cloneNode(true);
+  const card = template.content
+    ? template.content.cloneNode(true)
+    : template.firstElementChild.cloneNode(true);
   card.querySelectorAll("[data-field]").forEach((node) => {
     const key = node.getAttribute("data-field");
     let value = data[key];

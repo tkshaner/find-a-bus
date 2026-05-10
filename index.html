@@ -61,163 +61,193 @@
           TheBus Route & Vehicle Explorer
         </h1>
         <p>
-          Discover Honolulu bus routes, live vehicle positions, and stop arrivals using
+          Plan the next move across Oahu: find a route, check a stop, track a vehicle, or explore nearby stops using
           <a href="https://api.thebus.org" target="_blank" rel="noopener">TheBus API</a>.
-          Enter your API key and search parameters below to get started.
         </p>
-
-        <div class="security-notice" role="alert">
-          <strong>⚠️ Security Notice:</strong> Your API key is stored in your browser. By default, it's cleared when you close the tab.
-          Never use production or paid API keys with this tool.
-          <a href="https://www.honolulutransit.org/" target="_blank" rel="noopener">Get a free developer key</a>.
-        </div>
-
-        <div class="api-key-container">
-          <label class="input-group" for="apiKey">
-            <span>API Key</span>
-            <div class="input-with-controls">
-              <input id="apiKey" type="password" autocomplete="off" placeholder="Enter your TheBus API key" aria-describedby="key-help" />
-              <button type="button" id="toggleKeyVisibility" class="btn-icon" aria-label="Toggle API key visibility" title="Show/Hide key">
-                <span class="icon-eye" aria-hidden="true">👁️</span>
-              </button>
-              <button type="button" id="clearKey" class="btn-icon" aria-label="Clear API key" title="Clear key">
-                <span class="icon-clear" aria-hidden="true">✕</span>
-              </button>
-            </div>
-          </label>
-          <small id="key-help" class="help-text">Your key is stored temporarily in this browser session</small>
-
-          <label class="checkbox-group">
-            <input type="checkbox" id="rememberKey" />
-            <span>Remember my key (stores permanently in browser)</span>
-          </label>
-
-          <label class="checkbox-group">
-            <input type="checkbox" id="usePublicProxy" />
-            <span>Use public CORS proxy</span>
-          </label>
-          <small id="public-proxy-help" class="help-text">
-            Routes requests through <strong>corsproxy.io</strong> to avoid CORS issues. Convenient but may be slower or rate-limited. For production use, consider your own proxy.
-          </small>
-
-          <label class="input-group" for="proxyTemplate">
-            <span>Proxy Template (optional)</span>
-            <input
-              id="proxyTemplate"
-              type="text"
-              autocomplete="off"
-              placeholder="https://your-proxy.example/?url={url}"
-              aria-describedby="proxy-help"
-            />
-          </label>
-          <small id="proxy-help" class="help-text">
-            Optional for GitHub Pages/CORS. Use your own proxy and include {url} (encoded) or {url_raw} in the template. Example:
-            https://your-worker.workers.dev/?url={url}
-          </small>
-        </div>
+        <nav class="task-nav" aria-label="Primary app areas">
+          <a href="#routes-title">Routes</a>
+          <a href="#arrivals-title">Arrivals</a>
+          <a href="#vehicle-title">Vehicles</a>
+          <a href="#stops-map-title">Map</a>
+        </nav>
       </div>
     </header>
 
     <main>
-      <section class="panel" aria-labelledby="stops-map-title">
+      <section class="panel setup-panel" aria-labelledby="setup-title">
         <div class="panel__header">
-          <h2 id="stops-map-title">All Bus Stops</h2>
-          <p>Browse all 3,825+ TheBus stops across Oahu. Click any stop to see upcoming arrivals.</p>
+          <div class="section-kicker">Step 1</div>
+          <h2 id="setup-title">Connect TheBus API</h2>
+          <p>Add your key once, then use any lookup below without leaving the page.</p>
         </div>
-        <div class="map-controls">
-          <button type="button" id="toggleStopsBtn" class="btn">Show All Stops on Map</button>
-          <button type="button" id="findNearbyBtn" class="btn btn-secondary" style="display: none;">Find Stops Near Me</button>
+        <div class="api-key-container">
+          <div class="security-notice" role="alert">
+            <strong>Security Notice:</strong> Your API key is stored in your browser. By default, it's cleared when you close the tab.
+            Never use production or paid API keys with this tool.
+            <a href="https://www.honolulutransit.org/" target="_blank" rel="noopener">Get a free developer key</a>.
+          </div>
+
+          <div class="setup-grid">
+            <label class="input-group" for="apiKey">
+              <span>API Key</span>
+              <div class="input-with-controls">
+                <input id="apiKey" type="password" autocomplete="off" placeholder="Enter your TheBus API key" aria-describedby="key-help" />
+                <button type="button" id="toggleKeyVisibility" class="btn-icon" aria-label="Toggle API key visibility" title="Show/Hide key">
+                  <span class="icon-eye" aria-hidden="true">Show</span>
+                </button>
+                <button type="button" id="clearKey" class="btn-icon" aria-label="Clear API key" title="Clear key">
+                  <span class="icon-clear" aria-hidden="true">Clear</span>
+                </button>
+              </div>
+              <small id="key-help" class="help-text">Your key is stored temporarily in this browser session</small>
+            </label>
+
+            <div class="setup-options" aria-label="API storage and proxy options">
+              <label class="checkbox-group">
+                <input type="checkbox" id="rememberKey" />
+                <span>Remember my key</span>
+              </label>
+
+              <label class="checkbox-group">
+                <input type="checkbox" id="usePublicProxy" />
+                <span>Use public CORS proxy</span>
+              </label>
+              <small id="public-proxy-help" class="help-text">
+                Routes requests through <strong>corsproxy.io</strong>. Helpful on GitHub Pages, but it may be slower or rate-limited.
+              </small>
+            </div>
+          </div>
+
+          <details class="advanced-settings" open>
+            <summary>Advanced API settings</summary>
+            <label class="input-group" for="proxyTemplate">
+              <span>Proxy Template (optional)</span>
+              <input
+                id="proxyTemplate"
+                type="text"
+                autocomplete="off"
+                placeholder="https://your-proxy.example/?url={url}"
+                aria-describedby="proxy-help"
+              />
+            </label>
+            <small id="proxy-help" class="help-text">
+              Use your own proxy and include {url} (encoded) or {url_raw}. Example:
+              https://your-worker.workers.dev/?url={url}
+            </small>
+          </details>
         </div>
-        <div id="stopsMap" class="map-container" style="display: none;">
-          <div id="stopsMapCanvas" class="map-canvas" style="height: 500px;"></div>
-        </div>
-        <div id="stopsMessage" class="info-message" style="display: none;"></div>
       </section>
 
-      <section class="panel" aria-labelledby="saved-commute-title">
-        <div class="panel__header">
-          <h2 id="saved-commute-title">Saved Commute</h2>
-          <p>Save your frequent stops and route searches for one-click access.</p>
-        </div>
-        <div id="savedCommuteResults" class="results" role="status" aria-live="polite"></div>
-      </section>
+      <div class="workspace-layout">
+        <div class="lookup-stack">
+          <section class="panel lookup-panel lookup-panel--primary" aria-labelledby="routes-title">
+            <div class="panel__header">
+              <div class="section-kicker">Plan</div>
+              <h2 id="routes-title">Find Routes</h2>
+              <p>Start with a route number, then use the map and variants to understand the path.</p>
+            </div>
+            <form id="routeForm" class="form-grid">
+              <label class="input-group" for="routeNumber">
+                <span>Route Number</span>
+                <input id="routeNumber" name="route" type="text" placeholder="e.g. 2" required />
+              </label>
+              <label class="input-group" for="routeHeadsign">
+                <span>Headsign (optional)</span>
+                <input id="routeHeadsign" name="headsign" type="text" placeholder="e.g. HAWAII KAI" />
+              </label>
+              <button type="submit" class="btn">Search Routes</button>
+              <button type="button" id="saveRouteFavorite" class="btn btn-secondary">Save Route</button>
+            </form>
+            <div id="routeVariantSelector" class="variant-panel" style="display: none;">
+              <label class="input-group" for="variantSelect">
+                <span>Route Variant</span>
+                <select id="variantSelect" class="variant-select">
+                  <!-- Options populated dynamically -->
+                </select>
+              </label>
+            </div>
+            <div id="routeMap" class="map-container" style="display: none;">
+              <div id="routeMapCanvas" class="map-canvas"></div>
+            </div>
+            <div id="routeResults" class="results" role="status" aria-live="polite"></div>
+          </section>
 
-      <section class="panel" aria-labelledby="routes-title">
-        <div class="panel__header">
-          <h2 id="routes-title">Find Routes</h2>
-          <p>Search for routes by number and optional headsign keyword.</p>
-        </div>
-        <form id="routeForm" class="form-grid">
-          <label class="input-group" for="routeNumber">
-            <span>Route Number</span>
-            <input id="routeNumber" name="route" type="text" placeholder="e.g. 2" required />
-          </label>
-          <label class="input-group" for="routeHeadsign">
-            <span>Headsign (optional)</span>
-            <input id="routeHeadsign" name="headsign" type="text" placeholder="e.g. HAWAII KAI" />
-          </label>
-          <button type="submit" class="btn">Search Routes</button>
-          <button type="button" id="saveRouteFavorite" class="btn btn-secondary">Save Route</button>
-        </form>
-        <div id="routeVariantSelector" style="display: none; margin: 1rem 0;">
-          <label class="input-group" for="variantSelect">
-            <span>Route Variant</span>
-            <select id="variantSelect" class="variant-select">
-              <!-- Options populated dynamically -->
-            </select>
-          </label>
-        </div>
-        <div id="routeMap" class="map-container" style="display: none;">
-          <div id="routeMapCanvas" class="map-canvas"></div>
-        </div>
-        <div id="routeResults" class="results" role="status" aria-live="polite"></div>
-      </section>
+          <section class="panel lookup-panel" aria-labelledby="arrivals-title">
+            <div class="panel__header">
+              <div class="section-kicker">Depart</div>
+              <h2 id="arrivals-title">Check Stop Arrivals</h2>
+              <p>Already at a stop? Enter the stop number to see upcoming arrivals.</p>
+            </div>
+            <form id="arrivalsForm" class="form-grid">
+              <label class="input-group" for="stopNumber">
+                <span>Stop Number</span>
+                <input id="stopNumber" name="stop" type="text" placeholder="e.g. 1" required />
+              </label>
+              <button type="submit" class="btn">View Arrivals</button>
+              <button type="button" id="saveStopFavorite" class="btn btn-secondary">Save Stop</button>
+            </form>
+            <div id="arrivalsResults" class="results" role="status" aria-live="polite"></div>
+          </section>
 
-      <section class="panel" aria-labelledby="vehicle-title">
-        <div class="panel__header">
-          <h2 id="vehicle-title">Track a Vehicle</h2>
-          <p>Enter a bus number to view its latest position, route, and schedule adherence.</p>
+          <section class="panel lookup-panel" aria-labelledby="vehicle-title">
+            <div class="panel__header">
+              <div class="section-kicker">Track</div>
+              <h2 id="vehicle-title">Track a Vehicle</h2>
+              <p>Enter a bus number to inspect location, route, and schedule adherence.</p>
+            </div>
+            <form id="vehicleForm" class="form-grid">
+              <label class="input-group" for="vehicleNumber">
+                <span>Vehicle Number</span>
+                <input id="vehicleNumber" name="num" type="text" placeholder="e.g. 249" required />
+              </label>
+              <button type="submit" class="btn">Get Vehicle Info</button>
+            </form>
+            <div id="vehicleMap" class="map-container" style="display: none;">
+              <div id="vehicleMapCanvas" class="map-canvas"></div>
+            </div>
+            <div id="vehicleResults" class="results" role="status" aria-live="polite"></div>
+          </section>
         </div>
-        <form id="vehicleForm" class="form-grid">
-          <label class="input-group" for="vehicleNumber">
-            <span>Vehicle Number</span>
-            <input id="vehicleNumber" name="num" type="text" placeholder="e.g. 249" required />
-          </label>
-          <button type="submit" class="btn">Get Vehicle Info</button>
-        </form>
-        <div id="vehicleMap" class="map-container" style="display: none;">
-          <div id="vehicleMapCanvas" class="map-canvas"></div>
-        </div>
-        <div id="vehicleResults" class="results" role="status" aria-live="polite"></div>
-      </section>
 
-      <section class="panel" aria-labelledby="arrivals-title">
-        <div class="panel__header">
-          <h2 id="arrivals-title">Check Stop Arrivals</h2>
-          <p>See upcoming arrivals for a stop to plan your trip.</p>
-        </div>
-        <form id="arrivalsForm" class="form-grid">
-          <label class="input-group" for="stopNumber">
-            <span>Stop Number</span>
-            <input id="stopNumber" name="stop" type="text" placeholder="e.g. 1" required />
-          </label>
-          <button type="submit" class="btn">View Arrivals</button>
-          <button type="button" id="saveStopFavorite" class="btn btn-secondary">Save Stop</button>
-        </form>
-        <div id="arrivalsResults" class="results" role="status" aria-live="polite"></div>
-      </section>
+        <aside class="side-rail" aria-label="Shortcuts and exploration">
+          <section class="panel saved-panel" aria-labelledby="saved-commute-title">
+            <div class="panel__header">
+              <div class="section-kicker">Shortcuts</div>
+              <h2 id="saved-commute-title">Saved Commute</h2>
+              <p>Save frequent stops and route searches for one-click reuse.</p>
+            </div>
+            <div id="savedCommuteResults" class="results" role="status" aria-live="polite"></div>
+          </section>
 
-      <section class="panel panel--info">
-        <h2>Usage Tips</h2>
-        <ul>
-          <li>Create a free API key at <a href="https://www.honolulutransit.org/" target="_blank" rel="noopener">TheBus developer site</a>.</li>
-          <li>The <code>headsign</code> filter on routes is currently limited, so try searching with only the route number first.</li>
-          <li>Vehicle latitude/longitude values can be plotted on a map app to see the precise location.</li>
-        </ul>
-      </section>
+          <section class="panel map-panel" aria-labelledby="stops-map-title">
+            <div class="panel__header">
+              <div class="section-kicker">Explore</div>
+              <h2 id="stops-map-title">All Bus Stops</h2>
+              <p>Browse all 3,825+ TheBus stops across Oahu. Click any stop to see upcoming arrivals.</p>
+            </div>
+            <div class="map-controls">
+              <button type="button" id="toggleStopsBtn" class="btn">Show All Stops on Map</button>
+              <button type="button" id="findNearbyBtn" class="btn btn-secondary" style="display: none;">Find Stops Near Me</button>
+            </div>
+            <div id="stopsMap" class="map-container" style="display: none;">
+              <div id="stopsMapCanvas" class="map-canvas" style="height: 500px;"></div>
+            </div>
+            <div id="stopsMessage" class="info-message" style="display: none;"></div>
+          </section>
+
+          <section class="panel panel--info">
+            <h2>Usage Tips</h2>
+            <ul>
+              <li>Create a free API key at <a href="https://www.honolulutransit.org/" target="_blank" rel="noopener">TheBus developer site</a>.</li>
+              <li>The <code>headsign</code> filter on routes is currently limited, so try searching with only the route number first.</li>
+              <li>Use saved commute shortcuts for stops and routes you check often.</li>
+            </ul>
+          </section>
+        </aside>
+      </div>
     </main>
 
-    <template id="route-template">
+    <div id="route-template" hidden>
       <article class="card">
         <h3>Route <span data-field="routeNum"></span></h3>
         <dl>
@@ -226,9 +256,9 @@
           <div><dt>Shape ID</dt><dd data-field="shapeID"></dd></div>
         </dl>
       </article>
-    </template>
+    </div>
 
-    <template id="vehicle-template">
+    <div id="vehicle-template" hidden>
       <article class="card">
         <h3>Vehicle <span data-field="number"></span></h3>
         <dl>
@@ -243,9 +273,9 @@
           <div><dt>Trip Details</dt><dd data-field="trip_details"></dd></div>
         </dl>
       </article>
-    </template>
+    </div>
 
-    <template id="arrival-template">
+    <div id="arrival-template" hidden>
       <article class="card">
         <h3><span data-field="route"></span> &mdash; <span data-field="headsign"></span></h3>
         <dl>
@@ -256,7 +286,7 @@
           <div><dt>Status</dt><dd data-field="canceled"></dd></div>
         </dl>
       </article>
-    </template>
+    </div>
 
     <script src="app.js" type="module"></script>
   </body>
