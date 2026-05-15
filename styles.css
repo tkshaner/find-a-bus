@@ -518,6 +518,7 @@ dd {
 
 .empty-state,
 .error-state,
+.success-state,
 .info-message {
   padding: 1rem;
   border-radius: 8px;
@@ -714,4 +715,11 @@ footer {
   .checkbox-group {
     align-items: flex-start;
   }
+}
+
+
+.success-state {
+  background: color-mix(in srgb, var(--color-success), var(--color-surface) 86%);
+  border-color: var(--color-success);
+  color: var(--color-text);
 }

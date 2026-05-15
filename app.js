@@ -131,6 +131,13 @@ const proxyTemplateInput = document.getElementById("proxyTemplate");
 const usePublicProxyCheckbox = document.getElementById("usePublicProxy");
 const saveRouteFavoriteBtn = document.getElementById("saveRouteFavorite");
 const saveStopFavoriteBtn = document.getElementById("saveStopFavorite");
+const towardDestinationForm = document.getElementById("towardDestinationForm");
+const towardDestinationResults = document.getElementById("towardDestinationResults");
+const useCurrentLocationForOriginBtn = document.getElementById("useCurrentLocationForOrigin");
+
+let currentTowardOrigin = null;
+const arrivalsCache = new Map();
+const ARRIVALS_CACHE_TTL_MS = 30000;
 
 const storageKey = "thebus-api-key";
 const rememberKeyStorageKey = "thebus-remember-key";
@@ -1177,6 +1184,183 @@ if (toggleStopsBtn) {
 if (findNearbyBtn) {
   findNearbyBtn.addEventListener('click', findNearbyStops);
 }
+
+
+
+function milesToKm(miles) { return Number(miles) * 1.609344; }
+function kmToMiles(km) { return Number(km) / 1.609344; }
+function distanceMiles(pointA, pointB) { return kmToMiles(calculateDistance(pointA.lat, pointA.lon, pointB.lat, pointB.lon)); }
+function distanceToWalkingMinutes(miles) { return (Number(miles) / 3) * 60; }
+function getStopIdentifier(stop) { return String(stop?.code || stop?.id || "").trim(); }
+
+async function findStopsNearPoint(point, radiusMiles, maxStops = 8) {
+  const data = await loadStopsData();
+  const within = data
+    .map((stop) => ({ ...stop, distanceMiles: distanceMiles(point, { lat: stop.lat, lon: stop.lon }) }))
+    .filter((stop) => stop.distanceMiles <= radiusMiles)
+    .sort((a, b) => a.distanceMiles - b.distanceMiles)
+    .slice(0, maxStops);
+  return within;
+}
+
+async function fetchArrivalsForStopCached(stopId) {
+  const now = Date.now();
+  const cached = arrivalsCache.get(stopId);
+  if (cached && now - cached.ts < ARRIVALS_CACHE_TTL_MS) return cached.arrivals;
+  const data = await fetchFromApi("/arrivalsJSON/", { stop: stopId });
+  const arrivals = data?.arrivals || [];
+  arrivalsCache.set(stopId, { ts: now, arrivals });
+  return arrivals;
+}
+
+async function runWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length);
+  let idx = 0;
+  async function runner() {
+    while (idx < items.length) {
+      const i = idx++;
+      results[i] = await worker(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => runner()));
+  return results;
+}
+
+async function fetchArrivalsForStops(stops) {
+  return runWithConcurrency(stops, 3, async (stop) => {
+    const stopId = getStopIdentifier(stop);
+    const arrivals = await fetchArrivalsForStopCached(stopId);
+    return { stop, stopId, arrivals };
+  });
+}
+
+function parseArrivalWaitMinutes(arrival) {
+  const direct = Number(arrival?.stopTime);
+  if (Number.isFinite(direct) && direct >= 0) return direct;
+  const possible = [arrival?.arriveTime, arrival?.arrival_time, arrival?.scheduled_arrival_time].filter(Boolean);
+  for (const value of possible) {
+    const t = Date.parse(value);
+    if (!Number.isNaN(t)) return Math.max(0, Math.round((t - Date.now()) / 60000));
+  }
+  return 240;
+}
+
+function findStopIndexInSequence(sequence, stop) {
+  const id = getStopIdentifier(stop);
+  return sequence.findIndex((seqStop) => getStopIdentifier(seqStop) === id || String(seqStop?.id||"") === String(stop?.id||""));
+}
+
+function findBestDownstreamDestinationStop(sequence, startIndex, destination) {
+  let best = null;
+  for (let i = startIndex + 1; i < sequence.length; i++) {
+    const seqStop = sequence[i];
+    const d = distanceMiles(destination, { lat: seqStop.lat, lon: seqStop.lon });
+    if (!best || d < best.distanceMiles) best = { stop: seqStop, distanceMiles: d, index: i };
+  }
+  return best;
+}
+
+function evaluateArrivalTowardDestination({ arrival, boardingStop, destination, routeStopsData }) {
+  if (String(arrival?.canceled) === '1') return null;
+  const route = String(arrival?.route || '').trim();
+  if (!route || !routeStopsData?.[route]?.shapes) return null;
+  const routeShapes = routeStopsData[route].shapes;
+  const arrivalShape = String(arrival?.shape || '').trim();
+
+  const checks = [];
+  if (arrivalShape && routeShapes[arrivalShape]) checks.push({ shapeId: arrivalShape, confidence: 'High', reason: 'Exact shape match' });
+  Object.keys(routeShapes).forEach((sid) => { if (sid !== arrivalShape) checks.push({ shapeId: sid, confidence: 'Medium', reason: 'Fallback route shape' }); });
+
+  for (const check of checks) {
+    const seq = routeShapes[check.shapeId] || [];
+    const idx = findStopIndexInSequence(seq, boardingStop);
+    if (idx < 0) continue;
+    const downstream = findBestDownstreamDestinationStop(seq, idx, destination);
+    if (!downstream) continue;
+    if (downstream.distanceMiles <= 0.5) {
+      return {
+        arrival, boardingStop, downstreamStop: downstream.stop, route, shape: check.shapeId,
+        headsign: arrival?.headsign || '', vehicle: arrival?.vehicle || '', waitMinutes: parseArrivalWaitMinutes(arrival),
+        walkToBoardingMiles: boardingStop.distanceMiles, destinationWalkMiles: downstream.distanceMiles,
+        confidence: check.confidence, confidenceReasons: [check.reason]
+      };
+    }
+  }
+  return null;
+}
+
+function scoreTowardDestinationCandidate(candidate) {
+  const penalties = { High: 0, Medium: 5, Low: 10 };
+  const confidencePenalty = penalties[candidate.confidence] ?? 10;
+  candidate.score = candidate.waitMinutes + distanceToWalkingMinutes(candidate.walkToBoardingMiles) + distanceToWalkingMinutes(candidate.destinationWalkMiles) + confidencePenalty;
+  return candidate.score;
+}
+
+function renderTowardDestinationError(message) { renderMessage(towardDestinationResults, message, 'error-state'); }
+
+function renderTowardDestinationResults(candidates, updatedAt) {
+  towardDestinationResults.replaceChildren();
+  if (!candidates.length) return renderMessage(towardDestinationResults, 'No nearby arrivals appear to continue toward that destination. Try a wider radius or a different destination point.');
+  const stamp = document.createElement('p');
+  stamp.className = 'saved-commute-meta';
+  stamp.textContent = `Last updated: ${updatedAt.toLocaleTimeString()}`;
+  towardDestinationResults.append(stamp);
+  candidates.slice(0,10).forEach((c) => {
+    const card = document.createElement('article'); card.className = 'card';
+    card.innerHTML = `<h3>Route ${c.route} — ${c.headsign || 'Headsign unavailable'}</h3>
+      <p><strong>Board at:</strong> ${c.boardingStop.name} (Stop ${getStopIdentifier(c.boardingStop)})</p>
+      <p><strong>Walk to stop:</strong> ${c.walkToBoardingMiles.toFixed(2)} mi • <strong>Wait:</strong> ${Number.isFinite(c.waitMinutes)?c.waitMinutes+' min':'Scheduled time unavailable'}</p>
+      <p><strong>Destination-near stop:</strong> ${c.downstreamStop.name} (${c.destinationWalkMiles.toFixed(2)} mi away)</p>
+      <p><strong>Vehicle:</strong> ${c.vehicle || '—'} • <strong>Confidence:</strong> ${c.confidence}</p>`;
+    const actions=document.createElement('div'); actions.className='saved-commute-actions';
+    const b1=document.createElement('button'); b1.className='btn'; b1.textContent='Check arrivals'; b1.type='button'; b1.onclick=()=>{document.getElementById('stopNumber').value=getStopIdentifier(c.boardingStop); arrivalsForm?.requestSubmit(); document.querySelector('#arrivals-title')?.closest('.panel')?.scrollIntoView({behavior:'smooth',block:'start'});};
+    actions.append(b1);
+    if (c.vehicle) { const b2=document.createElement('button'); b2.className='btn btn-secondary'; b2.type='button'; b2.textContent='Track bus'; b2.onclick=()=>{document.getElementById('vehicleNumber').value=c.vehicle; vehicleForm?.requestSubmit(); document.querySelector('#vehicle-title')?.closest('.panel')?.scrollIntoView({behavior:'smooth',block:'start'});}; actions.append(b2); }
+    const b3=document.createElement('button'); b3.className='btn btn-secondary'; b3.type='button'; b3.textContent='Show route'; b3.onclick=()=>{document.getElementById('routeNumber').value=c.route; routeForm?.requestSubmit(); document.querySelector('#routes-title')?.closest('.panel')?.scrollIntoView({behavior:'smooth',block:'start'});};
+    actions.append(b3); card.append(actions); towardDestinationResults.append(card);
+  });
+}
+
+useCurrentLocationForOriginBtn?.addEventListener('click', () => {
+  if (!navigator.geolocation) return renderTowardDestinationError('Geolocation is unavailable in this browser.');
+  renderMessage(towardDestinationResults, 'Getting your current location...');
+  navigator.geolocation.getCurrentPosition((position) => {
+    currentTowardOrigin = { lat: position.coords.latitude, lon: position.coords.longitude };
+    renderMessage(towardDestinationResults, `Origin set to your current location (${currentTowardOrigin.lat.toFixed(5)}, ${currentTowardOrigin.lon.toFixed(5)}).`, 'success-state');
+  }, (error) => {
+    const map={1:'Location permission denied.',2:'Location unavailable.',3:'Location request timed out.'};
+    renderTowardDestinationError(map[error.code] || `Unable to get location: ${error.message}`);
+  }, { enableHighAccuracy:false, timeout:10000, maximumAge:300000 });
+});
+
+towardDestinationForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!currentTowardOrigin) return renderTowardDestinationError('Please click “Use My Location as Origin” first.');
+  const destinationLat = Number(document.getElementById('destinationLat')?.value);
+  const destinationLon = Number(document.getElementById('destinationLon')?.value);
+  if (!Number.isFinite(destinationLat) || !Number.isFinite(destinationLon) || destinationLat < -90 || destinationLat > 90 || destinationLon < -180 || destinationLon > 180) {
+    return renderTowardDestinationError('Enter valid destination latitude and longitude.');
+  }
+  const radiusMiles = Number(document.getElementById('towardSearchRadius')?.value || 0.75);
+  renderLoading(towardDestinationResults);
+  try {
+    const [_, rsData] = await Promise.all([loadStopsData(), loadRouteStopsData()]);
+    if (!rsData) throw new Error('Route-stop data is unavailable right now.');
+    const nearbyStops = await findStopsNearPoint(currentTowardOrigin, radiusMiles, 8);
+    if (!nearbyStops.length) return renderTowardDestinationError('No nearby stops were found within the selected radius.');
+    const stopArrivalSets = await fetchArrivalsForStops(nearbyStops);
+    const destination = { lat: destinationLat, lon: destinationLon };
+    const candidates = [];
+    stopArrivalSets.forEach(({ stop, arrivals }) => arrivals.forEach((arrival) => {
+      const c = evaluateArrivalTowardDestination({ arrival, boardingStop: stop, destination, routeStopsData: rsData });
+      if (c) { scoreTowardDestinationCandidate(c); candidates.push(c); }
+    }));
+    candidates.sort((a,b)=>a.score-b.score || a.waitMinutes-b.waitMinutes || a.walkToBoardingMiles-b.walkToBoardingMiles || a.destinationWalkMiles-b.destinationWalkMiles || Number(Boolean(b.arrival?.estimated))-Number(Boolean(a.arrival?.estimated)));
+    renderTowardDestinationResults(candidates, new Date());
+  } catch (error) {
+    renderTowardDestinationError(error?.message || 'Unable to find toward-destination options right now.');
+  }
+});
 
 
 if (saveRouteFavoriteBtn) {
