@@ -133,9 +133,7 @@ const saveRouteFavoriteBtn = document.getElementById("saveRouteFavorite");
 const saveStopFavoriteBtn = document.getElementById("saveStopFavorite");
 const towardDestinationForm = document.getElementById("towardDestinationForm");
 const towardDestinationResults = document.getElementById("towardDestinationResults");
-const useCurrentLocationForOriginBtn = document.getElementById("useCurrentLocationForOrigin");
 
-let currentTowardOrigin = null;
 const arrivalsCache = new Map();
 const ARRIVALS_CACHE_TTL_MS = 30000;
 
@@ -1245,120 +1243,161 @@ function parseArrivalWaitMinutes(arrival) {
   return 240;
 }
 
-function findStopIndexInSequence(sequence, stop) {
-  const id = getStopIdentifier(stop);
-  return sequence.findIndex((seqStop) => getStopIdentifier(seqStop) === id || String(seqStop?.id||"") === String(stop?.id||""));
-}
-
-function findBestDownstreamDestinationStop(sequence, startIndex, destination) {
-  let best = null;
-  for (let i = startIndex + 1; i < sequence.length; i++) {
-    const seqStop = sequence[i];
-    const d = distanceMiles(destination, { lat: seqStop.lat, lon: seqStop.lon });
-    if (!best || d < best.distanceMiles) best = { stop: seqStop, distanceMiles: d, index: i };
-  }
-  return best;
-}
-
-function evaluateArrivalTowardDestination({ arrival, boardingStop, destination, routeStopsData }) {
-  if (String(arrival?.canceled) === '1') return null;
-  const route = String(arrival?.route || '').trim();
-  if (!route || !routeStopsData?.[route]?.shapes) return null;
-  const routeShapes = routeStopsData[route].shapes;
-  const arrivalShape = String(arrival?.shape || '').trim();
-
-  const checks = [];
-  if (arrivalShape && routeShapes[arrivalShape]) checks.push({ shapeId: arrivalShape, confidence: 'High', reason: 'Exact shape match' });
-  Object.keys(routeShapes).forEach((sid) => { if (sid !== arrivalShape) checks.push({ shapeId: sid, confidence: 'Medium', reason: 'Fallback route shape' }); });
-
-  for (const check of checks) {
-    const seq = routeShapes[check.shapeId] || [];
-    const idx = findStopIndexInSequence(seq, boardingStop);
-    if (idx < 0) continue;
-    const downstream = findBestDownstreamDestinationStop(seq, idx, destination);
-    if (!downstream) continue;
-    if (downstream.distanceMiles <= 0.5) {
-      return {
-        arrival, boardingStop, downstreamStop: downstream.stop, route, shape: check.shapeId,
-        headsign: arrival?.headsign || '', vehicle: arrival?.vehicle || '', waitMinutes: parseArrivalWaitMinutes(arrival),
-        walkToBoardingMiles: boardingStop.distanceMiles, destinationWalkMiles: downstream.distanceMiles,
-        confidence: check.confidence, confidenceReasons: [check.reason]
-      };
-    }
-  }
-  return null;
-}
-
-function scoreTowardDestinationCandidate(candidate) {
-  const penalties = { High: 0, Medium: 5, Low: 10 };
-  const confidencePenalty = penalties[candidate.confidence] ?? 10;
-  candidate.score = candidate.waitMinutes + distanceToWalkingMinutes(candidate.walkToBoardingMiles) + distanceToWalkingMinutes(candidate.destinationWalkMiles) + confidencePenalty;
-  return candidate.score;
-}
-
 function renderTowardDestinationError(message) { renderMessage(towardDestinationResults, message, 'error-state'); }
 
-function renderTowardDestinationResults(candidates, updatedAt) {
+function parseDestinationCoordinates(query) {
+  const match = String(query || "").trim().match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lon = Number(match[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  return { lat, lon, label: `${lat.toFixed(5)}, ${lon.toFixed(5)}` };
+}
+
+async function geocodeDestinationSearch(query) {
+  const coordinateDestination = parseDestinationCoordinates(query);
+  if (coordinateDestination) return coordinateDestination;
+
+  const params = new URLSearchParams({
+    q: `${query}, Honolulu, Hawaii`,
+    limit: "5",
+    lat: "21.3099",
+    lon: "-157.8581"
+  });
+
+  const response = await fetch(`https://photon.komoot.io/api/?${params.toString()}`, {
+    headers: { Accept: "application/json" }
+  });
+  if (!response.ok) throw new Error("Destination search is unavailable right now.");
+
+  const data = await response.json();
+  const places = Array.isArray(data?.features) ? data.features : [];
+  const place = places.find((feature) => {
+    const [lon, lat] = feature?.geometry?.coordinates || [];
+    return Number.isFinite(lat) && Number.isFinite(lon) &&
+      lat >= 21.2 && lat <= 21.75 &&
+      lon >= -158.35 && lon <= -157.55 &&
+      String(feature?.properties?.countrycode || "").toUpperCase() === "US";
+  });
+
+  if (!place) {
+    throw new Error("No destination match found on Oahu. Try a nearby landmark or address.");
+  }
+
+  const [lon, lat] = place.geometry.coordinates;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    throw new Error("That destination did not include usable map coordinates.");
+  }
+  const properties = place.properties || {};
+  const labelParts = [properties.name, properties.street, properties.city || properties.county].filter(Boolean);
+  return {
+    lat,
+    lon,
+    label: labelParts.join(", ") || query
+  };
+}
+
+function getArrivalWaitLabel(arrival) {
+  const minutes = parseArrivalWaitMinutes(arrival);
+  return Number.isFinite(minutes) && minutes < 240 ? `${minutes} min` : "Scheduled time unavailable";
+}
+
+function renderDestinationNearbyResults(destination, stopArrivalSets, radiusMiles, updatedAt) {
   towardDestinationResults.replaceChildren();
-  if (!candidates.length) return renderMessage(towardDestinationResults, 'No nearby arrivals appear to continue toward that destination. Try a wider radius or a different destination point.');
-  const stamp = document.createElement('p');
-  stamp.className = 'saved-commute-meta';
-  stamp.textContent = `Last updated: ${updatedAt.toLocaleTimeString()}`;
+  if (!stopArrivalSets.length) {
+    return renderMessage(towardDestinationResults, `No stops were found within ${radiusMiles} mi of that destination.`);
+  }
+
+  const stamp = document.createElement("p");
+  stamp.className = "saved-commute-meta";
+  stamp.textContent = `Near ${destination.label} • Last updated: ${updatedAt.toLocaleTimeString()}`;
   towardDestinationResults.append(stamp);
-  candidates.slice(0,10).forEach((c) => {
-    const card = document.createElement('article'); card.className = 'card';
-    card.innerHTML = `<h3>Route ${c.route} — ${c.headsign || 'Headsign unavailable'}</h3>
-      <p><strong>Board at:</strong> ${c.boardingStop.name} (Stop ${getStopIdentifier(c.boardingStop)})</p>
-      <p><strong>Walk to stop:</strong> ${c.walkToBoardingMiles.toFixed(2)} mi • <strong>Wait:</strong> ${Number.isFinite(c.waitMinutes)?c.waitMinutes+' min':'Scheduled time unavailable'}</p>
-      <p><strong>Destination-near stop:</strong> ${c.downstreamStop.name} (${c.destinationWalkMiles.toFixed(2)} mi away)</p>
-      <p><strong>Vehicle:</strong> ${c.vehicle || '—'} • <strong>Confidence:</strong> ${c.confidence}</p>`;
-    const actions=document.createElement('div'); actions.className='saved-commute-actions';
-    const b1=document.createElement('button'); b1.className='btn'; b1.textContent='Check arrivals'; b1.type='button'; b1.onclick=()=>{document.getElementById('stopNumber').value=getStopIdentifier(c.boardingStop); arrivalsForm?.requestSubmit(); document.querySelector('#arrivals-title')?.closest('.panel')?.scrollIntoView({behavior:'smooth',block:'start'});};
-    actions.append(b1);
-    if (c.vehicle) { const b2=document.createElement('button'); b2.className='btn btn-secondary'; b2.type='button'; b2.textContent='Track bus'; b2.onclick=()=>{document.getElementById('vehicleNumber').value=c.vehicle; vehicleForm?.requestSubmit(); document.querySelector('#vehicle-title')?.closest('.panel')?.scrollIntoView({behavior:'smooth',block:'start'});}; actions.append(b2); }
-    const b3=document.createElement('button'); b3.className='btn btn-secondary'; b3.type='button'; b3.textContent='Show route'; b3.onclick=()=>{document.getElementById('routeNumber').value=c.route; routeForm?.requestSubmit(); document.querySelector('#routes-title')?.closest('.panel')?.scrollIntoView({behavior:'smooth',block:'start'});};
-    actions.append(b3); card.append(actions); towardDestinationResults.append(card);
+
+  stopArrivalSets.forEach(({ stop, stopId, arrivals }) => {
+    const activeArrivals = arrivals
+      .filter((arrival) => String(arrival?.canceled) !== "1")
+      .sort((a, b) => parseArrivalWaitMinutes(a) - parseArrivalWaitMinutes(b))
+      .slice(0, 3);
+
+    const card = document.createElement("article");
+    card.className = "card";
+
+    const title = document.createElement("h3");
+    title.textContent = `${stop.name} (Stop ${stopId})`;
+
+    const meta = document.createElement("p");
+    meta.innerHTML = `<strong>Distance from destination:</strong> ${stop.distanceMiles.toFixed(2)} mi`;
+
+    card.append(title, meta);
+
+    if (activeArrivals.length) {
+      const list = document.createElement("dl");
+      activeArrivals.forEach((arrival) => {
+        const row = document.createElement("div");
+        const term = document.createElement("dt");
+        const details = document.createElement("dd");
+        term.textContent = `Route ${arrival.route || "?"}`;
+        details.textContent = `${arrival.headsign || "Headsign unavailable"} • ${getArrivalWaitLabel(arrival)}${arrival.vehicle ? ` • Vehicle ${arrival.vehicle}` : ""}`;
+        row.append(term, details);
+        list.append(row);
+      });
+      card.append(list);
+    } else {
+      const empty = document.createElement("p");
+      empty.className = "saved-commute-meta";
+      empty.textContent = "No upcoming arrivals reported for this stop.";
+      card.append(empty);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "saved-commute-actions";
+
+    const arrivalsButton = document.createElement("button");
+    arrivalsButton.className = "btn";
+    arrivalsButton.type = "button";
+    arrivalsButton.textContent = "Check arrivals";
+    arrivalsButton.onclick = () => {
+      document.getElementById("stopNumber").value = stopId;
+      arrivalsForm?.requestSubmit();
+      document.querySelector("#arrivals-title")?.closest(".panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    actions.append(arrivalsButton);
+
+    const firstVehicle = activeArrivals.find((arrival) => arrival.vehicle)?.vehicle;
+    if (firstVehicle) {
+      const vehicleButton = document.createElement("button");
+      vehicleButton.className = "btn btn-secondary";
+      vehicleButton.type = "button";
+      vehicleButton.textContent = "Track first bus";
+      vehicleButton.onclick = () => {
+        document.getElementById("vehicleNumber").value = firstVehicle;
+        vehicleForm?.requestSubmit();
+        document.querySelector("#vehicle-title")?.closest(".panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+      actions.append(vehicleButton);
+    }
+
+    card.append(actions);
+    towardDestinationResults.append(card);
   });
 }
 
-useCurrentLocationForOriginBtn?.addEventListener('click', () => {
-  if (!navigator.geolocation) return renderTowardDestinationError('Geolocation is unavailable in this browser.');
-  renderMessage(towardDestinationResults, 'Getting your current location...');
-  navigator.geolocation.getCurrentPosition((position) => {
-    currentTowardOrigin = { lat: position.coords.latitude, lon: position.coords.longitude };
-    renderMessage(towardDestinationResults, `Origin set to your current location (${currentTowardOrigin.lat.toFixed(5)}, ${currentTowardOrigin.lon.toFixed(5)}).`, 'success-state');
-  }, (error) => {
-    const map={1:'Location permission denied.',2:'Location unavailable.',3:'Location request timed out.'};
-    renderTowardDestinationError(map[error.code] || `Unable to get location: ${error.message}`);
-  }, { enableHighAccuracy:false, timeout:10000, maximumAge:300000 });
-});
-
 towardDestinationForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (!currentTowardOrigin) return renderTowardDestinationError('Please click “Use My Location as Origin” first.');
-  const destinationLat = Number(document.getElementById('destinationLat')?.value);
-  const destinationLon = Number(document.getElementById('destinationLon')?.value);
-  if (!Number.isFinite(destinationLat) || !Number.isFinite(destinationLon) || destinationLat < -90 || destinationLat > 90 || destinationLon < -180 || destinationLon > 180) {
-    return renderTowardDestinationError('Enter valid destination latitude and longitude.');
+  const destinationQuery = document.getElementById('destinationSearch')?.value.trim();
+  if (!destinationQuery) {
+    return renderTowardDestinationError('Enter a destination, landmark, address, or coordinates.');
   }
   const radiusMiles = Number(document.getElementById('towardSearchRadius')?.value || 0.75);
   renderLoading(towardDestinationResults);
   try {
-    const [_, rsData] = await Promise.all([loadStopsData(), loadRouteStopsData()]);
-    if (!rsData) throw new Error('Route-stop data is unavailable right now.');
-    const nearbyStops = await findStopsNearPoint(currentTowardOrigin, radiusMiles, 8);
-    if (!nearbyStops.length) return renderTowardDestinationError('No nearby stops were found within the selected radius.');
+    const destination = await geocodeDestinationSearch(destinationQuery);
+    const nearbyStops = await findStopsNearPoint(destination, radiusMiles, 8);
+    if (!nearbyStops.length) return renderTowardDestinationError('No stops were found within the selected radius.');
     const stopArrivalSets = await fetchArrivalsForStops(nearbyStops);
-    const destination = { lat: destinationLat, lon: destinationLon };
-    const candidates = [];
-    stopArrivalSets.forEach(({ stop, arrivals }) => arrivals.forEach((arrival) => {
-      const c = evaluateArrivalTowardDestination({ arrival, boardingStop: stop, destination, routeStopsData: rsData });
-      if (c) { scoreTowardDestinationCandidate(c); candidates.push(c); }
-    }));
-    candidates.sort((a,b)=>a.score-b.score || a.waitMinutes-b.waitMinutes || a.walkToBoardingMiles-b.walkToBoardingMiles || a.destinationWalkMiles-b.destinationWalkMiles || Number(Boolean(b.arrival?.estimated))-Number(Boolean(a.arrival?.estimated)));
-    renderTowardDestinationResults(candidates, new Date());
+    renderDestinationNearbyResults(destination, stopArrivalSets, radiusMiles, new Date());
   } catch (error) {
-    renderTowardDestinationError(error?.message || 'Unable to find toward-destination options right now.');
+    renderTowardDestinationError(error?.message || 'Unable to find nearby destination options right now.');
   }
 });
 

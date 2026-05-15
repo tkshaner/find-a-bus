@@ -192,18 +192,14 @@
 
           <section class="panel lookup-panel" aria-labelledby="toward-title">
             <div class="panel__header">
-              <div class="section-kicker">MVP</div>
-              <h2 id="toward-title">Find Buses Toward Destination</h2>
-              <p>Pick a destination point and find nearby arrivals that appear to continue toward it.</p>
+              <div class="section-kicker">Destination</div>
+              <h2 id="toward-title">Find Stops Near Destination</h2>
+              <p>Search where you want to go and see nearby stops with upcoming arrivals.</p>
             </div>
             <form id="towardDestinationForm" class="form-grid">
-              <label class="input-group" for="destinationLat">
-                <span>Destination Latitude</span>
-                <input id="destinationLat" name="destinationLat" type="number" step="any" placeholder="e.g. 21.3000" required />
-              </label>
-              <label class="input-group" for="destinationLon">
-                <span>Destination Longitude</span>
-                <input id="destinationLon" name="destinationLon" type="number" step="any" placeholder="e.g. -157.8200" required />
+              <label class="input-group" for="destinationSearch">
+                <span>Destination</span>
+                <input id="destinationSearch" name="destinationSearch" type="text" placeholder="e.g. Ala Moana Center" autocomplete="street-address" required />
               </label>
               <label class="input-group" for="towardSearchRadius">
                 <span>Search Radius</span>
@@ -213,8 +209,7 @@
                   <option value="1">1 mi</option>
                 </select>
               </label>
-              <button type="button" id="useCurrentLocationForOrigin" class="btn btn-secondary">Use My Location as Origin</button>
-              <button type="submit" class="btn">Find Nearby Options</button>
+              <button type="submit" class="btn">Find Nearby Stops</button>
             </form>
             <div id="towardDestinationResults" class="results" role="status" aria-live="polite"></div>
           </section>

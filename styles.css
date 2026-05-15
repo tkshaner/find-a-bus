@@ -293,6 +293,10 @@ main {
   grid-template-columns: minmax(180px, 1fr) auto;
 }
 
+#towardDestinationForm {
+  grid-template-columns: minmax(240px, 1fr) minmax(140px, 0.35fr) auto;
+}
+
 .input-group {
   display: grid;
   gap: 0.45rem;
@@ -316,6 +320,7 @@ main {
 
 input[type="text"],
 input[type="password"],
+select,
 select.variant-select {
   width: 100%;
   min-height: 44px;
@@ -330,6 +335,7 @@ select.variant-select {
 
 input[type="text"]:focus,
 input[type="password"]:focus,
+select:focus,
 select.variant-select:focus {
   outline: none;
   border-color: var(--color-primary);
