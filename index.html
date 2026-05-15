@@ -189,6 +189,36 @@
             <div id="arrivalsResults" class="results" role="status" aria-live="polite"></div>
           </section>
 
+
+          <section class="panel lookup-panel" aria-labelledby="toward-title">
+            <div class="panel__header">
+              <div class="section-kicker">MVP</div>
+              <h2 id="toward-title">Find Buses Toward Destination</h2>
+              <p>Pick a destination point and find nearby arrivals that appear to continue toward it.</p>
+            </div>
+            <form id="towardDestinationForm" class="form-grid">
+              <label class="input-group" for="destinationLat">
+                <span>Destination Latitude</span>
+                <input id="destinationLat" name="destinationLat" type="number" step="any" placeholder="e.g. 21.3000" required />
+              </label>
+              <label class="input-group" for="destinationLon">
+                <span>Destination Longitude</span>
+                <input id="destinationLon" name="destinationLon" type="number" step="any" placeholder="e.g. -157.8200" required />
+              </label>
+              <label class="input-group" for="towardSearchRadius">
+                <span>Search Radius</span>
+                <select id="towardSearchRadius" name="towardSearchRadius">
+                  <option value="0.5">0.5 mi</option>
+                  <option value="0.75" selected>0.75 mi</option>
+                  <option value="1">1 mi</option>
+                </select>
+              </label>
+              <button type="button" id="useCurrentLocationForOrigin" class="btn btn-secondary">Use My Location as Origin</button>
+              <button type="submit" class="btn">Find Nearby Options</button>
+            </form>
+            <div id="towardDestinationResults" class="results" role="status" aria-live="polite"></div>
+          </section>
+
           <section class="panel lookup-panel" aria-labelledby="vehicle-title">
             <div class="panel__header">
               <div class="section-kicker">Track</div>
