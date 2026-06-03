@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Stops Table View for Routes**: Toggle between the route map and a
+  scrollable table of stops for the selected variant
+  - Map / Stops Table toggle shown once a route is found
+  - Table lists each stop in sequence with stop name, code, and a
+    First/Last badge for the endpoints
+  - One-click "Arrivals" button per row reuses the existing arrivals workflow
+  - Table updates automatically when a different route variant is selected
+  - Accessible tablist/tabpanel semantics and full light/dark theme support
+
 ## [1.4.0] - 2025-10-28
 
 ### Added

@@ -166,9 +166,14 @@
                 </select>
               </label>
             </div>
+            <div id="routeViewToggle" class="view-toggle" role="tablist" aria-label="Route view" style="display: none;">
+              <button type="button" id="routeViewMapBtn" class="view-toggle__btn is-active" role="tab" aria-selected="true" aria-controls="routeMap">Map</button>
+              <button type="button" id="routeViewTableBtn" class="view-toggle__btn" role="tab" aria-selected="false" aria-controls="routeStopsTable">Stops Table</button>
+            </div>
             <div id="routeMap" class="map-container" style="display: none;">
               <div id="routeMapCanvas" class="map-canvas"></div>
             </div>
+            <div id="routeStopsTable" class="stops-table-container" role="tabpanel" aria-label="Route stops table" style="display: none;"></div>
             <div id="routeResults" class="results" role="status" aria-live="polite"></div>
           </section>
 
