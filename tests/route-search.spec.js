@@ -163,4 +163,33 @@ test.describe('Route Search and Visualization', () => {
     await expect(routeNumberInput).toHaveAttribute('name', 'route');
     await expect(routeHeadsignInput).toHaveAttribute('name', 'headsign');
   });
+
+  test('should have map/table view toggle hidden initially', async ({ page }) => {
+    const viewToggle = page.locator('#routeViewToggle');
+    await expect(viewToggle).toBeAttached();
+    await expect(viewToggle).toBeHidden();
+
+    const mapBtn = page.locator('#routeViewMapBtn');
+    const tableBtn = page.locator('#routeViewTableBtn');
+    await expect(mapBtn).toContainText('Map');
+    await expect(tableBtn).toContainText('Stops Table');
+  });
+
+  test('should expose toggle buttons as tabs', async ({ page }) => {
+    const mapBtn = page.locator('#routeViewMapBtn');
+    const tableBtn = page.locator('#routeViewTableBtn');
+
+    await expect(mapBtn).toHaveAttribute('role', 'tab');
+    await expect(tableBtn).toHaveAttribute('role', 'tab');
+    // Map view is the default selection
+    await expect(mapBtn).toHaveAttribute('aria-selected', 'true');
+    await expect(tableBtn).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('should have stops table container hidden initially', async ({ page }) => {
+    const stopsTable = page.locator('#routeStopsTable');
+    await expect(stopsTable).toBeAttached();
+    await expect(stopsTable).toBeHidden();
+    await expect(stopsTable).toHaveAttribute('role', 'tabpanel');
+  });
 });

@@ -112,6 +112,10 @@ const routeMapContainer = document.getElementById("routeMap");
 const routeMapCanvas = document.getElementById("routeMapCanvas");
 const routeVariantSelector = document.getElementById("routeVariantSelector");
 const variantSelect = document.getElementById("variantSelect");
+const routeViewToggle = document.getElementById("routeViewToggle");
+const routeViewMapBtn = document.getElementById("routeViewMapBtn");
+const routeViewTableBtn = document.getElementById("routeViewTableBtn");
+const routeStopsTable = document.getElementById("routeStopsTable");
 
 const vehicleMapContainer = document.getElementById("vehicleMap");
 const vehicleMapCanvas = document.getElementById("vehicleMapCanvas");
@@ -543,6 +547,8 @@ let routeStopsData = null;
 let routePolyline = null;
 let routeStopMarkers = [];
 let currentRouteNum = null;
+let currentShapeId = null;
+let currentRouteView = 'map';
 
 // Initialize route map
 function initRouteMap() {
@@ -745,6 +751,139 @@ function hideRouteMap() {
   routeStopMarkers.forEach(marker => marker.remove());
   routeStopMarkers = [];
 }
+
+// Hide the route map/table view controls and table
+function hideRouteViews() {
+  hideRouteMap();
+  if (routeViewToggle) {
+    routeViewToggle.style.display = 'none';
+  }
+  if (routeStopsTable) {
+    routeStopsTable.style.display = 'none';
+    routeStopsTable.replaceChildren();
+  }
+  currentShapeId = null;
+}
+
+// Render a table of stops for the selected route variant
+async function renderStopsTable(routeId, shapeIdOverride = null) {
+  if (!routeStopsTable) return;
+
+  const stopsData = await loadRouteStopsData();
+  if (!stopsData || !stopsData[routeId]) {
+    routeStopsTable.replaceChildren();
+    return;
+  }
+
+  const routeData = stopsData[routeId];
+  const shapeId = shapeIdOverride || Object.keys(routeData.shapes)[0];
+  const stops = routeData.shapes[shapeId];
+
+  if (!stops || stops.length === 0) {
+    routeStopsTable.replaceChildren();
+    return;
+  }
+
+  const scroll = document.createElement('div');
+  scroll.className = 'stops-table-scroll';
+
+  const table = document.createElement('table');
+  table.className = 'stops-table';
+
+  const caption = document.createElement('caption');
+  caption.textContent = `${stops[0].name} → ${stops[stops.length - 1].name} (${stops.length} stops)`;
+  table.appendChild(caption);
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  ['#', 'Stop', 'Code', ''].forEach((label, idx) => {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = label;
+    if (idx === 3) {
+      th.className = 'stop-action';
+      th.setAttribute('aria-label', 'Arrivals');
+    }
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  stops.forEach((stop, index) => {
+    const isFirst = index === 0;
+    const isLast = index === stops.length - 1;
+    const stopCode = stop.code || stop.id;
+
+    const tr = document.createElement('tr');
+
+    const seqTd = document.createElement('td');
+    seqTd.className = 'stop-seq';
+    seqTd.textContent = stop.sequence ?? index + 1;
+    tr.appendChild(seqTd);
+
+    const nameTd = document.createElement('td');
+    nameTd.className = 'stop-name';
+    nameTd.textContent = stop.name;
+    if (isFirst || isLast) {
+      const badge = document.createElement('span');
+      badge.className = `stop-badge ${isFirst ? 'stop-badge--first' : 'stop-badge--last'}`;
+      badge.textContent = isFirst ? 'First' : 'Last';
+      nameTd.appendChild(badge);
+    }
+    tr.appendChild(nameTd);
+
+    const codeTd = document.createElement('td');
+    codeTd.textContent = stopCode;
+    tr.appendChild(codeTd);
+
+    const actionTd = document.createElement('td');
+    actionTd.className = 'stop-action';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-secondary';
+    button.textContent = 'Arrivals';
+    button.addEventListener('click', () => window.checkStopArrivals(stopCode));
+    actionTd.appendChild(button);
+    tr.appendChild(actionTd);
+
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+
+  scroll.appendChild(table);
+  routeStopsTable.replaceChildren(scroll);
+}
+
+// Switch between the map and stops table views
+function setRouteView(view) {
+  currentRouteView = view === 'table' ? 'table' : 'map';
+  const showTable = currentRouteView === 'table';
+
+  if (routeMapContainer) {
+    routeMapContainer.style.display = showTable ? 'none' : 'block';
+  }
+  if (routeStopsTable) {
+    routeStopsTable.style.display = showTable ? 'block' : 'none';
+  }
+
+  if (routeViewMapBtn) {
+    routeViewMapBtn.classList.toggle('is-active', !showTable);
+    routeViewMapBtn.setAttribute('aria-selected', String(!showTable));
+  }
+  if (routeViewTableBtn) {
+    routeViewTableBtn.classList.toggle('is-active', showTable);
+    routeViewTableBtn.setAttribute('aria-selected', String(showTable));
+  }
+
+  // Leaflet needs a size recalculation when the map becomes visible again
+  if (!showTable && routeMap) {
+    setTimeout(() => routeMap.invalidateSize(), 100);
+  }
+}
+
+routeViewMapBtn?.addEventListener('click', () => setRouteView('map'));
+routeViewTableBtn?.addEventListener('click', () => setRouteView('table'));
 
 // Map instance for vehicle tracking
 let vehicleMap = null;
@@ -1804,6 +1943,9 @@ async function populateVariantSelector(routeNum) {
   const shapesData = await loadRouteShapesData();
   const stopsData = await loadRouteStopsData();
 
+  // Reset options so a stale value from a prior search can't leak through
+  variantSelect.replaceChildren();
+
   if (!shapesData || !shapesData[routeNum] || !stopsData || !stopsData[routeNum]) {
     routeVariantSelector.style.display = 'none';
     return;
@@ -1811,16 +1953,8 @@ async function populateVariantSelector(routeNum) {
 
   const shapeIds = Object.keys(shapesData[routeNum].shapes);
 
-  // Only show selector if there are multiple variants
-  if (shapeIds.length <= 1) {
-    routeVariantSelector.style.display = 'none';
-    return;
-  }
-
-  // Clear existing options
-  variantSelect.replaceChildren();
-
-  // Create options for each variant with descriptive names
+  // Always populate options so variantSelect.value reflects the active variant,
+  // even when the panel itself stays hidden for single-variant routes.
   shapeIds.forEach((shapeId, index) => {
     const stops = stopsData[routeNum].shapes[shapeId];
     if (!stops || stops.length === 0) return;
@@ -1835,11 +1969,11 @@ async function populateVariantSelector(routeNum) {
     variantSelect.appendChild(option);
   });
 
-  // Show the selector
-  routeVariantSelector.style.display = 'block';
-
   // Select the first variant by default
   variantSelect.selectedIndex = 0;
+
+  // Only reveal the selector when there's more than one variant to choose from
+  routeVariantSelector.style.display = shapeIds.length > 1 ? 'block' : 'none';
 }
 
 // Handle variant selection change
@@ -1847,10 +1981,12 @@ async function handleVariantChange() {
   if (!currentRouteNum) return;
 
   const selectedShapeId = variantSelect.value;
+  currentShapeId = selectedShapeId;
 
   // Redraw route with selected variant
   await drawRoutePath(currentRouteNum, selectedShapeId);
   await addRouteStops(currentRouteNum, selectedShapeId);
+  await renderStopsTable(currentRouteNum, selectedShapeId);
 }
 
 // Add event listener for variant selector
@@ -1863,7 +1999,7 @@ routeForm?.addEventListener("submit", async (event) => {
   const headsign = formData.get("headsign");
 
   renderLoading(routeResults);
-  hideRouteMap();
+  hideRouteViews();
   routeVariantSelector.style.display = 'none'; // Hide variant selector while loading
 
   try {
@@ -1874,7 +2010,7 @@ routeForm?.addEventListener("submit", async (event) => {
 
     if (!data.route || data.route.length === 0) {
       renderMessage(routeResults, "No routes found. Try a different search.");
-      hideRouteMap();
+      hideRouteViews();
       currentRouteNum = null;
       return;
     }
@@ -1887,11 +2023,20 @@ routeForm?.addEventListener("submit", async (event) => {
     // Populate variant selector
     await populateVariantSelector(routeNum);
 
-    const drawnRoute = await drawRoutePath(routeNum);
+    // Track the variant currently shown (selector defaults to the first)
+    currentShapeId = variantSelect?.value || null;
+
+    const drawnRoute = await drawRoutePath(routeNum, currentShapeId);
     if (drawnRoute) {
-      // Add stop markers along the route
-      await addRouteStops(routeNum);
+      // Add stop markers and build the stops table for the active variant
+      await addRouteStops(routeNum, currentShapeId);
+      await renderStopsTable(routeNum, currentShapeId);
       showRouteMap();
+      // Reveal the map/table toggle and honor the current view selection
+      if (routeViewToggle) {
+        routeViewToggle.style.display = 'inline-flex';
+      }
+      setRouteView(currentRouteView);
     }
 
     // Still show cards below map for detailed info
@@ -1920,7 +2065,7 @@ routeForm?.addEventListener("submit", async (event) => {
     });
   } catch (error) {
     renderMessage(routeResults, error.message, "error-state");
-    hideRouteMap();
+    hideRouteViews();
   }
 });
 
