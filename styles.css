@@ -494,22 +494,25 @@ dd {
   margin: 0;
 }
 
-/* Compact result cards (Find Routes + Check Stop Arrivals) */
+/* Compact result cards (Find Routes + Check Stop Arrivals + Track a Vehicle) */
 .arrival-card,
-.route-card {
+.route-card,
+.vehicle-card {
   display: grid;
   gap: 0.5rem;
   padding: 0.7rem 0.85rem;
 }
 
 .arrival-card__primary,
-.route-card__primary {
+.route-card__primary,
+.vehicle-card__primary {
   display: grid;
   align-items: center;
   gap: 0.7rem;
 }
 
-.arrival-card__primary {
+.arrival-card__primary,
+.vehicle-card__primary {
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
@@ -531,14 +534,21 @@ dd {
   line-height: 1;
 }
 
-.arrival-card__dest {
+.route-badge a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.arrival-card__dest,
+.vehicle-card__dest {
   min-width: 0;
   display: grid;
   gap: 0.1rem;
 }
 
 .arrival-card__headsign,
-.route-card__headsign {
+.route-card__headsign,
+.vehicle-card__headsign {
   font-size: 0.98rem;
   font-weight: 600;
   white-space: nowrap;
@@ -547,11 +557,13 @@ dd {
 }
 
 .arrival-card__headsign a,
-.route-card__headsign a {
+.route-card__headsign a,
+.vehicle-card__headsign a {
   color: inherit;
 }
 
-.arrival-card__sub {
+.arrival-card__sub,
+.vehicle-card__sub {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -559,7 +571,8 @@ dd {
   color: var(--color-text-muted);
 }
 
-.arrival-card__time {
+.arrival-card__time,
+.vehicle-card__status {
   justify-self: end;
   text-align: right;
   white-space: nowrap;
@@ -569,8 +582,13 @@ dd {
   font-variant-numeric: tabular-nums;
 }
 
+.vehicle-card__status {
+  font-size: 1rem;
+}
+
 .arrival-card__meta,
-.route-card__meta {
+.route-card__meta,
+.vehicle-card__meta {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 0.9rem;
@@ -580,19 +598,22 @@ dd {
 }
 
 .arrival-card__meta div,
-.route-card__meta div {
+.route-card__meta div,
+.vehicle-card__meta div {
   display: flex;
   align-items: baseline;
   gap: 0.35rem;
 }
 
 .arrival-card__meta dt,
-.route-card__meta dt {
+.route-card__meta dt,
+.vehicle-card__meta dt {
   font-size: 0.64rem;
 }
 
 .arrival-card__meta dd,
-.route-card__meta dd {
+.route-card__meta dd,
+.vehicle-card__meta dd {
   font-size: 0.82rem;
 }
 

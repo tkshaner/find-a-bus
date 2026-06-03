@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Compact Vehicle Tracking Cards (mobile)**: Applied the same compact
+  layout to the "Track a Vehicle" results
+  - Route badge + headsign as the title, with the vehicle number as a small
+    caption beneath
+  - On-time status (adherence) emphasized on the right, mirroring the
+    arrival-time treatment
+  - Driver, Last Update, Trip, Trip Details, and a combined Coordinates
+    field condensed onto a single wrapping secondary row instead of nine
+    stacked label/value pairs
+  - Shares styling with the arrival and route cards; preserves the
+    route-search link and light/dark theming
 - **Compact Route Result Cards (mobile)**: Applied the same compact layout
   to the "Find Routes" variant cards
   - Route number shown as a badge next to the variant destination/headsign
