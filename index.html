@@ -291,18 +291,21 @@
     </div>
 
     <div id="vehicle-template" hidden>
-      <article class="card">
-        <h3>Vehicle <span data-field="number"></span></h3>
-        <dl>
-          <div><dt>Route</dt><dd data-field="route_short_name"></dd></div>
-          <div><dt>Headsign</dt><dd data-field="headsign"></dd></div>
-          <div><dt>Adherence</dt><dd data-field="adherence"></dd></div>
-          <div><dt>Driver</dt><dd data-field="driver"></dd></div>
+      <article class="card vehicle-card">
+        <div class="vehicle-card__primary">
+          <span class="route-badge" data-field="route_short_name"></span>
+          <div class="vehicle-card__dest">
+            <span class="vehicle-card__headsign" data-field="headsign"></span>
+            <span class="vehicle-card__sub">Vehicle <span data-field="number"></span></span>
+          </div>
+          <span class="vehicle-card__status" data-field="adherence"></span>
+        </div>
+        <dl class="vehicle-card__meta">
           <div><dt>Last Update</dt><dd data-field="last_message"></dd></div>
-          <div><dt>Latitude</dt><dd data-field="latitude"></dd></div>
-          <div><dt>Longitude</dt><dd data-field="longitude"></dd></div>
+          <div><dt>Driver</dt><dd data-field="driver"></dd></div>
           <div><dt>Trip</dt><dd data-field="trip"></dd></div>
           <div><dt>Trip Details</dt><dd data-field="trip_details"></dd></div>
+          <div><dt>Coordinates</dt><dd><span data-field="latitude"></span>, <span data-field="longitude"></span></dd></div>
         </dl>
       </article>
     </div>
