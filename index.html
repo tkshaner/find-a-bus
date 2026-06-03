@@ -278,10 +278,12 @@
     </main>
 
     <div id="route-template" hidden>
-      <article class="card">
-        <h3>Route <span data-field="routeNum"></span></h3>
-        <dl>
-          <div><dt>Headsign</dt><dd data-field="headsign"></dd></div>
+      <article class="card route-card">
+        <div class="route-card__primary">
+          <span class="route-badge" data-field="routeNum"></span>
+          <span class="route-card__headsign" data-field="headsign"></span>
+        </div>
+        <dl class="route-card__meta">
           <div><dt>First Stop</dt><dd data-field="firstStop"></dd></div>
           <div><dt>Shape ID</dt><dd data-field="shapeID"></dd></div>
         </dl>

@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Compact Route Result Cards (mobile)**: Applied the same compact layout
+  to the "Find Routes" variant cards
+  - Route number shown as a badge next to the variant destination/headsign
+  - First Stop and Shape ID condensed onto a single secondary row instead
+    of stacked label/value pairs
+  - Shares styling with the arrival cards for a consistent look and keeps
+    the existing headsign route-search link and light/dark theming
 - **Compact Arrival Cards (mobile)**: Redesigned the "Check Stop Arrivals"
   results for a denser, more scannable mobile layout
   - Route number now shown as a compact badge next to the destination
