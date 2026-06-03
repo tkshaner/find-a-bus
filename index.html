@@ -306,11 +306,16 @@
     </div>
 
     <div id="arrival-template" hidden>
-      <article class="card">
-        <h3><span data-field="route"></span> &mdash; <span data-field="headsign"></span></h3>
-        <dl>
-          <div><dt>Scheduled</dt><dd data-field="stopTime"></dd></div>
-          <div><dt>Estimated</dt><dd data-field="estimated"></dd></div>
+      <article class="card arrival-card">
+        <div class="arrival-card__primary">
+          <span class="route-badge" data-field="route"></span>
+          <div class="arrival-card__dest">
+            <span class="arrival-card__headsign" data-field="headsign"></span>
+            <span class="arrival-card__sub" data-field="estimated"></span>
+          </div>
+          <span class="arrival-card__time" data-field="stopTime"></span>
+        </div>
+        <dl class="arrival-card__meta">
           <div><dt>Vehicle</dt><dd data-field="vehicle"></dd></div>
           <div><dt>Direction</dt><dd data-field="direction"></dd></div>
           <div><dt>Status</dt><dd data-field="canceled"></dd></div>

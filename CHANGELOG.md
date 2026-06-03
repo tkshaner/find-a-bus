@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Compact Arrival Cards (mobile)**: Redesigned the "Check Stop Arrivals"
+  results for a denser, more scannable mobile layout
+  - Route number now shown as a compact badge next to the destination
+  - Arrival time emphasized on the right and formatted as "5 min" / "Due"
+  - Real-time vs. scheduled indicator moved to a small caption under the
+    destination
+  - Vehicle, Direction, and Status condensed onto a single secondary row
+    instead of five stacked label/value pairs
+  - Significantly reduces card height and scrolling on phones while
+    preserving full light/dark theme support and existing links
+
 ### Added
 - **Stops Table View for Routes**: Toggle between the route map and a
   scrollable table of stops for the selected variant
