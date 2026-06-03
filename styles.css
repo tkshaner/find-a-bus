@@ -494,6 +494,93 @@ dd {
   margin: 0;
 }
 
+/* Compact arrival cards (Check Stop Arrivals results) */
+.arrival-card {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.arrival-card__primary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.route-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.4rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 7px;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.arrival-card__dest {
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.arrival-card__headsign {
+  font-size: 0.98rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arrival-card__headsign a {
+  color: inherit;
+}
+
+.arrival-card__sub {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+}
+
+.arrival-card__time {
+  justify-self: end;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.arrival-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  margin: 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border-muted);
+}
+
+.arrival-card__meta div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.arrival-card__meta dt {
+  font-size: 0.64rem;
+}
+
+.arrival-card__meta dd {
+  font-size: 0.82rem;
+}
+
 .saved-commute-card {
   display: grid;
   gap: 0.75rem;

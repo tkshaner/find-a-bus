@@ -1636,6 +1636,12 @@ function renderCard(container, template, data) {
     if (key === "adherence" && value) {
       value = formatAdherence(value);
     }
+    if (key === "stopTime" && value !== undefined && value !== null && value !== "") {
+      const mins = Number(value);
+      if (Number.isFinite(mins)) {
+        value = mins <= 0 ? "Due" : `${mins} min`;
+      }
+    }
 
     if (key === "vehicle" && value !== undefined && value !== null && value !== "") {
       const link = document.createElement("a");
