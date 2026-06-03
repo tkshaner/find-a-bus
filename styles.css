@@ -494,18 +494,27 @@ dd {
   margin: 0;
 }
 
-/* Compact arrival cards (Check Stop Arrivals results) */
-.arrival-card {
+/* Compact result cards (Find Routes + Check Stop Arrivals) */
+.arrival-card,
+.route-card {
   display: grid;
   gap: 0.5rem;
   padding: 0.7rem 0.85rem;
 }
 
-.arrival-card__primary {
+.arrival-card__primary,
+.route-card__primary {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.7rem;
+}
+
+.arrival-card__primary {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.route-card__primary {
+  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .route-badge {
@@ -528,7 +537,8 @@ dd {
   gap: 0.1rem;
 }
 
-.arrival-card__headsign {
+.arrival-card__headsign,
+.route-card__headsign {
   font-size: 0.98rem;
   font-weight: 600;
   white-space: nowrap;
@@ -536,7 +546,8 @@ dd {
   text-overflow: ellipsis;
 }
 
-.arrival-card__headsign a {
+.arrival-card__headsign a,
+.route-card__headsign a {
   color: inherit;
 }
 
@@ -558,7 +569,8 @@ dd {
   font-variant-numeric: tabular-nums;
 }
 
-.arrival-card__meta {
+.arrival-card__meta,
+.route-card__meta {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 0.9rem;
@@ -567,17 +579,20 @@ dd {
   border-top: 1px solid var(--color-border-muted);
 }
 
-.arrival-card__meta div {
+.arrival-card__meta div,
+.route-card__meta div {
   display: flex;
   align-items: baseline;
   gap: 0.35rem;
 }
 
-.arrival-card__meta dt {
+.arrival-card__meta dt,
+.route-card__meta dt {
   font-size: 0.64rem;
 }
 
-.arrival-card__meta dd {
+.arrival-card__meta dd,
+.route-card__meta dd {
   font-size: 0.82rem;
 }
 
