@@ -17,7 +17,7 @@ test.describe('All Stops Map', () => {
 
     const section = page.locator('section').filter({ has: title });
     const description = section.locator('p').first();
-    await expect(description).toContainText('3,825');
+    await expect(description).toContainText('3,831');
     await expect(description).toContainText('TheBus stops');
   });
 
@@ -50,7 +50,7 @@ test.describe('All Stops Map', () => {
 
     const data = await response.json();
     expect(Array.isArray(data)).toBeTruthy();
-    expect(data.length).toBeGreaterThan(3800); // Should have ~3,825 stops
+    expect(data.length).toBe(3831);
   });
 
   test('should validate stops.json structure', async ({ page }) => {
@@ -127,7 +127,7 @@ test.describe('All Stops Map', () => {
       has: page.locator('#stops-map-title')
     });
     const description = section.locator('.panel__header p');
-    await expect(description).toContainText('3,825+');
+    await expect(description).toContainText('3,831');
   });
 
   test('should have proper ARIA labels for accessibility', async ({ page }) => {

@@ -119,7 +119,7 @@ tests/
 - ✅ Toggle button functionality
 - ✅ Find nearby button display
 - ✅ Data file loading (stops.json)
-- ✅ JSON structure validation (3,825 stops)
+- ✅ JSON structure validation (3,831 stops)
 - ✅ Coordinate validation (Honolulu bounds)
 - ✅ Leaflet MarkerCluster plugin
 - ✅ Global checkStopArrivals function
@@ -260,12 +260,12 @@ const result = await page.evaluate(() => window.someFunction());
 The test suite validates the structure and content of static data files:
 
 ### stops.json (364 KB)
-- 3,825 bus stops
+- 3,831 bus stops
 - Required fields: id, code, name, lat, lon
 - Coordinate validation for Honolulu bounds
 
-### routes-shapes.json (397 KB)
-- 120+ route paths
+### routes-shapes.json (2.1 MB)
+- 118 route paths
 - Simplified to every 3rd point
 - Polyline coordinates as [lat, lon] arrays
 
@@ -287,7 +287,7 @@ Tests include basic accessibility checks:
 
 - Tests use `networkidle` for load state when needed
 - Timeouts increased for large data files (10 seconds)
-- MarkerCluster library tested for 3,825 markers
+- MarkerCluster library tested for 3,831 markers
 - Screenshots only captured on failure to reduce overhead
 
 ## Troubleshooting

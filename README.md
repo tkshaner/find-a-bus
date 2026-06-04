@@ -51,9 +51,10 @@ Because the project is a static site, you can deploy it to GitHub Pages without 
 ├── app.js                    # Fetches data from the API and renders results
 ├── index.html                # Layout and form controls for the interface
 ├── styles.css                # Styling for the interface, cards, and states
-├── stops.json                # 3,825 bus stop locations (364 KB)
-├── routes-shapes.json        # Route path coordinates (397 KB)
-├── route-stops.json          # Stop sequences for routes (3 MB)
+├── stops.json                # 3,831 bus stop locations (364 KB)
+├── routes-shapes.json        # Route path coordinates (2.1 MB)
+├── route-stops.json          # Stop sequences for routes (2.5 MB)
+├── convert_stops.py          # GTFS stops to JSON conversion script
 ├── convert_route_stops.py    # GTFS to JSON conversion script
 ├── README.md                 # Project documentation
 ├── CHANGELOG.md              # Development log and version history
@@ -136,7 +137,7 @@ npm run test:report
 - ✅ **API Key Management** (8 tests): Storage, visibility, security
 - ✅ **Route Search** (12 tests): Forms, data validation, visualization
 - ✅ **Vehicle Tracking** (9 tests): Map display, templates, integration
-- ✅ **Stops Map** (13 tests): 3,825 stops, clustering, geolocation
+- ✅ **Stops Map** (13 tests): 3,831 stops, clustering, geolocation
 - ✅ **Arrivals** (8 tests): Form validation, results display
 - ✅ **Page Structure** (19 tests): Layout, responsive design, accessibility
 

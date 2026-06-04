@@ -1043,7 +1043,7 @@ async function loadStopsData() {
   }
 
   try {
-    showStopsMessage('Loading 3,825 bus stops...');
+    showStopsMessage('Loading 3,831 bus stops...');
     const response = await fetch('stops.json');
     if (!response.ok) {
       throw new Error('Failed to load stops data');
