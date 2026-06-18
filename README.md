@@ -20,7 +20,7 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 
 ### 3. Explore transit data
 
-- **Routes panel:** Type a route number and optionally add a headsign keyword to narrow the results.
+- **Routes panel:** Type a route number and optionally add a headsign keyword to narrow the results. Switch between the Map, Stops Table, and Timetable views for the selected route variant.
 - **Vehicles panel:** Enter a fleet number to see the vehicle's latest reported position and status.
 - **Arrivals panel:** Provide a stop number to view upcoming arrivals, including direction and schedule adherence.
 
@@ -37,6 +37,7 @@ Because the project is a static site, you can deploy it to GitHub Pages without 
 ## Features
 
 - Route search by number with optional headsign keyword.
+- Route timetable view showing planned scheduled departures, with a live fallback to TheBus arrivals API when the static schedule is unavailable.
 - Vehicle lookup by fleet number, including last reported position.
 - Stop arrivals list summarizing status, direction, and schedule adherence.
 - Consistent error, loading, and empty state messaging for better UX.
@@ -54,8 +55,10 @@ Because the project is a static site, you can deploy it to GitHub Pages without 
 ├── stops.json                # 3,831 bus stop locations (364 KB)
 ├── routes-shapes.json        # Route path coordinates (2.1 MB)
 ├── route-stops.json          # Stop sequences for routes (2.5 MB)
+├── route-timetable.json      # Optional planned timetable (generated offline)
 ├── convert_stops.py          # GTFS stops to JSON conversion script
 ├── convert_route_stops.py    # GTFS to JSON conversion script
+├── convert_timetable.py      # GTFS schedule to planned timetable JSON
 ├── README.md                 # Project documentation
 ├── CHANGELOG.md              # Development log and version history
 ├── TESTING.md                # Test documentation and guide

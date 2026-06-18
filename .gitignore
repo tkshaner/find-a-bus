@@ -32,3 +32,6 @@ package-lock.json
 test-results/
 playwright-report/
 playwright/.cache/
+# Python
+__pycache__/
+*.pyc

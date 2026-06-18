@@ -38,6 +38,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     preserving full light/dark theme support and existing links
 
 ### Added
+- **Route Timetable View**: Added a Timetable tab to the route panel
+  (Map / Stops Table / Timetable) showing planned scheduled departures for
+  the selected route
+  - New `convert_timetable.py` distills GTFS `stop_times.txt` into a compact
+    `route-timetable.json` — the scheduled departure time at the origin of
+    every trip, grouped by service day (Weekday / Saturday / Sunday) and
+    direction/headsign — so the 70 MB schedule never ships to the browser
+  - Static timetable groups departures by service day with a toggle that
+    defaults to today's service
+  - When `route-timetable.json` has not been generated yet, the tab falls
+    back to live scheduled departures from TheBus arrivals API, with a stop
+    selector to view the timetable at any stop along the route
+  - Timetable is built lazily (only when its tab is opened) to avoid
+    unnecessary API calls; rebuilds when the route variant changes
+  - Documented generation/refresh flow in `GTFS_ANALYSIS.md`; new Playwright
+    coverage in `tests/timetable.spec.js`
 - **Stops Table View for Routes**: Toggle between the route map and a
   scrollable table of stops for the selected variant
   - Map / Stops Table toggle shown once a route is found
