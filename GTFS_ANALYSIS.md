@@ -49,6 +49,7 @@ Conversion scripts:
 - `convert_stops.py`
 - `convert_route_shapes.py`
 - `convert_route_stops.py`
+- `convert_timetable.py` (optional planned timetable, see below)
 
 Recommended refresh flow:
 
@@ -58,7 +59,23 @@ unzip -o gtfs/google_transit.zip -d gtfs
 python3 convert_stops.py
 python3 convert_route_shapes.py
 python3 convert_route_stops.py
+python3 convert_timetable.py   # optional: generates route-timetable.json
 ```
+
+## Planned Timetable (`route-timetable.json`)
+
+`convert_timetable.py` implements opportunity #4 below in a size-controlled
+way. Instead of shipping the 70 MB `stop_times.txt`, it distills the schedule
+down to the **scheduled departure time at the origin of every trip**, grouped
+by route, service day (Weekday / Saturday / Sunday), and direction/headsign.
+The result is a compact `route-timetable.json` (a few hundred KB) keyed by
+`route_short_name`, matching the other generated assets.
+
+The website's Timetable tab loads this file when present. The file is
+**optional**: when it is absent the Timetable tab falls back to live scheduled
+departures from TheBus arrivals API, so the feature works before the static
+schedule has been generated. Because `route-timetable.json` is derived from the
+GTFS feed, regenerate it whenever you refresh the feed.
 
 ## Best Incorporation Opportunities
 

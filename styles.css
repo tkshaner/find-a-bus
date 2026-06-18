@@ -785,6 +785,85 @@ dd {
   font-size: 0.82rem;
 }
 
+/* Route timetable view */
+.timetable-container {
+  margin: 1rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-muted);
+  box-shadow: 0 8px 22px var(--color-shadow);
+  background: var(--color-surface-elevated);
+}
+
+.timetable__caption {
+  padding: 0.85rem 1rem;
+  font-weight: 700;
+  color: var(--color-primary-accent);
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+.timetable-note {
+  margin: 0;
+  padding: 0.65rem 1rem 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.timetable-service-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin: 0.75rem 1rem 0;
+  padding: 0.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-muted);
+  background: var(--color-surface);
+}
+
+.timetable-controls {
+  padding: 0.75rem 1rem 0;
+}
+
+.timetable-body {
+  padding: 0.5rem 1rem 1rem;
+}
+
+.timetable-block {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+.timetable-block:last-child {
+  border-bottom: none;
+}
+
+.timetable-block__title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.timetable-block__meta {
+  margin: 0.15rem 0 0.6rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.timetable-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.timetable-time {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-muted);
+  background: var(--color-surface);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .empty-state,
 .error-state,
 .success-state,

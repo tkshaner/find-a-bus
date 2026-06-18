@@ -115,7 +115,9 @@ const variantSelect = document.getElementById("variantSelect");
 const routeViewToggle = document.getElementById("routeViewToggle");
 const routeViewMapBtn = document.getElementById("routeViewMapBtn");
 const routeViewTableBtn = document.getElementById("routeViewTableBtn");
+const routeViewTimetableBtn = document.getElementById("routeViewTimetableBtn");
 const routeStopsTable = document.getElementById("routeStopsTable");
+const routeTimetable = document.getElementById("routeTimetable");
 
 const vehicleMapContainer = document.getElementById("vehicleMap");
 const vehicleMapCanvas = document.getElementById("vehicleMapCanvas");
@@ -544,6 +546,9 @@ const templates = {
 let routeMap = null;
 let routeShapesData = null;
 let routeStopsData = null;
+let routeTimetableData = null;
+let routeTimetableMissing = false;
+let timetableRendered = false;
 let routePolyline = null;
 let routeStopMarkers = [];
 let currentRouteNum = null;
@@ -599,6 +604,33 @@ async function loadRouteStopsData() {
     return routeStopsData;
   } catch (error) {
     console.error('Error loading route stops:', error);
+    return null;
+  }
+}
+
+// Load the planned timetable data (generated offline from GTFS by
+// convert_timetable.py). This file is optional: when it is missing the
+// Timetable view falls back to live scheduled departures from the API.
+async function loadRouteTimetableData() {
+  if (routeTimetableData) {
+    return routeTimetableData;
+  }
+  if (routeTimetableMissing) {
+    return null;
+  }
+
+  try {
+    const response = await fetch('route-timetable.json');
+    if (!response.ok) {
+      // 404 simply means the static schedule has not been generated yet.
+      routeTimetableMissing = true;
+      return null;
+    }
+    routeTimetableData = await response.json();
+    return routeTimetableData;
+  } catch (error) {
+    console.warn('Planned timetable data unavailable:', error);
+    routeTimetableMissing = true;
     return null;
   }
 }
@@ -762,6 +794,11 @@ function hideRouteViews() {
     routeStopsTable.style.display = 'none';
     routeStopsTable.replaceChildren();
   }
+  if (routeTimetable) {
+    routeTimetable.style.display = 'none';
+    routeTimetable.replaceChildren();
+  }
+  timetableRendered = false;
   currentShapeId = null;
 }
 
@@ -855,35 +892,303 @@ async function renderStopsTable(routeId, shapeIdOverride = null) {
   routeStopsTable.replaceChildren(scroll);
 }
 
-// Switch between the map and stops table views
+// Convert a GTFS-style clock time ("05:10" or "25:30") to a friendly 12-hour
+// label. GTFS allows hours >= 24 to express trips that run past midnight.
+function formatScheduleTime(value) {
+  const match = String(value ?? '').match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return String(value ?? '');
+  const hour = parseInt(match[1], 10);
+  const minutes = match[2];
+  const displayHour = hour % 24;
+  const period = displayHour >= 12 ? 'PM' : 'AM';
+  let hour12 = displayHour % 12;
+  if (hour12 === 0) hour12 = 12;
+  return `${hour12}:${minutes} ${period}`;
+}
+
+// Map today's weekday onto the GTFS service buckets produced by the generator.
+function currentServiceCategory() {
+  const day = new Date().getDay(); // 0 = Sunday ... 6 = Saturday
+  if (day === 0) return 'Sunday';
+  if (day === 6) return 'Saturday';
+  return 'Weekday';
+}
+
+// Render the planned timetable for a single direction/headsign block.
+function buildTimetableBlock(block) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'timetable-block';
+
+  const heading = document.createElement('h4');
+  heading.className = 'timetable-block__title';
+  const origin = block.origin ? `${block.origin} → ` : '';
+  heading.textContent = `${origin}${block.headsign || 'Destination unavailable'}`;
+  wrapper.appendChild(heading);
+
+  const meta = document.createElement('p');
+  meta.className = 'timetable-block__meta';
+  meta.textContent = `${block.times.length} scheduled departure${block.times.length === 1 ? '' : 's'}`;
+  wrapper.appendChild(meta);
+
+  const times = document.createElement('div');
+  times.className = 'timetable-times';
+  block.times.forEach((time) => {
+    const chip = document.createElement('span');
+    chip.className = 'timetable-time';
+    chip.textContent = formatScheduleTime(time);
+    times.appendChild(chip);
+  });
+  wrapper.appendChild(times);
+
+  return wrapper;
+}
+
+// Render the static planned timetable that was generated offline from GTFS.
+function renderStaticTimetable(routeEntry) {
+  const services = routeEntry.services || {};
+  const order = ['Weekday', 'Saturday', 'Sunday', 'Other'];
+  const available = order.filter((name) => Array.isArray(services[name]) && services[name].length > 0);
+
+  if (available.length === 0) {
+    renderMessage(routeTimetable, 'No planned timetable is available for this route.');
+    return;
+  }
+
+  const container = document.createElement('div');
+  container.className = 'timetable';
+
+  const caption = document.createElement('div');
+  caption.className = 'timetable__caption';
+  caption.textContent = `Route ${routeEntry.name} planned timetable`;
+  container.appendChild(caption);
+
+  const note = document.createElement('p');
+  note.className = 'timetable-note';
+  note.textContent = 'Scheduled departure times from the start of each trip (static GTFS schedule).';
+  container.appendChild(note);
+
+  // Service-day toggle (Weekday / Saturday / Sunday), defaulting to today.
+  const toggle = document.createElement('div');
+  toggle.className = 'timetable-service-toggle';
+  toggle.setAttribute('role', 'tablist');
+
+  const body = document.createElement('div');
+  body.className = 'timetable-body';
+
+  const today = currentServiceCategory();
+  const defaultService = available.includes(today) ? today : available[0];
+
+  const showService = (serviceName) => {
+    body.replaceChildren();
+    services[serviceName].forEach((block) => body.appendChild(buildTimetableBlock(block)));
+    toggle.querySelectorAll('button').forEach((btn) => {
+      const active = btn.dataset.service === serviceName;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', String(active));
+    });
+  };
+
+  available.forEach((serviceName) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'view-toggle__btn';
+    btn.setAttribute('role', 'tab');
+    btn.dataset.service = serviceName;
+    btn.textContent = serviceName;
+    btn.addEventListener('click', () => showService(serviceName));
+    toggle.appendChild(btn);
+  });
+
+  container.appendChild(toggle);
+  container.appendChild(body);
+  routeTimetable.replaceChildren(container);
+
+  showService(defaultService);
+}
+
+// Render a live timetable of upcoming scheduled departures from the API.
+// Used as a fallback when the static GTFS timetable has not been generated.
+async function renderLiveTimetable(routeId, shapeIdOverride = null) {
+  const stopsData = await loadRouteStopsData();
+  const routeData = stopsData?.[routeId];
+  if (!routeData) {
+    renderMessage(routeTimetable, 'No timetable data is available for this route.');
+    return;
+  }
+
+  const shapeId = shapeIdOverride || Object.keys(routeData.shapes)[0];
+  const stops = routeData.shapes[shapeId] || [];
+  if (stops.length === 0) {
+    renderMessage(routeTimetable, 'No timetable data is available for this route.');
+    return;
+  }
+
+  const container = document.createElement('div');
+  container.className = 'timetable';
+
+  const caption = document.createElement('div');
+  caption.className = 'timetable__caption';
+  caption.textContent = `Route ${routeData.name} upcoming departures`;
+  container.appendChild(caption);
+
+  const note = document.createElement('p');
+  note.className = 'timetable-note';
+  note.textContent = 'Live scheduled departures from TheBus API. Pick a stop along the route to see its timetable.';
+  container.appendChild(note);
+
+  const controls = document.createElement('div');
+  controls.className = 'timetable-controls';
+  const label = document.createElement('label');
+  label.className = 'input-group';
+  label.setAttribute('for', 'timetableStopSelect');
+  const labelText = document.createElement('span');
+  labelText.textContent = 'Stop';
+  const select = document.createElement('select');
+  select.id = 'timetableStopSelect';
+  select.className = 'variant-select';
+  stops.forEach((stop, index) => {
+    const option = document.createElement('option');
+    option.value = stop.code || stop.id;
+    option.textContent = `${index + 1}. ${stop.name}`;
+    select.appendChild(option);
+  });
+  label.append(labelText, select);
+  controls.appendChild(label);
+  container.appendChild(controls);
+
+  const body = document.createElement('div');
+  body.className = 'timetable-body';
+  container.appendChild(body);
+
+  routeTimetable.replaceChildren(container);
+
+  const loadStopTimetable = async (stopId) => {
+    renderLoading(body);
+    try {
+      const arrivals = await fetchArrivalsForStopCached(stopId);
+      const forRoute = arrivals.filter(
+        (arrival) => String(arrival.route) === String(routeId) && String(arrival.canceled) !== '1'
+      );
+
+      if (forRoute.length === 0) {
+        renderMessage(body, 'No upcoming scheduled departures for this route at the selected stop.');
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.className = 'stops-table';
+
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
+      ['Departs', 'Destination', 'Source'].forEach((text) => {
+        const th = document.createElement('th');
+        th.scope = 'col';
+        th.textContent = text;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      forRoute.forEach((arrival) => {
+        const tr = document.createElement('tr');
+
+        const timeTd = document.createElement('td');
+        timeTd.className = 'stop-name';
+        timeTd.textContent = arrival.stopTime || '—';
+        tr.appendChild(timeTd);
+
+        const destTd = document.createElement('td');
+        destTd.textContent = arrival.headsign || '—';
+        tr.appendChild(destTd);
+
+        const sourceTd = document.createElement('td');
+        sourceTd.textContent = arrival.estimated === '1' || arrival.estimated === 1
+          ? 'Real-time' : 'Scheduled';
+        tr.appendChild(sourceTd);
+
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+
+      const scroll = document.createElement('div');
+      scroll.className = 'stops-table-scroll';
+      scroll.appendChild(table);
+      body.replaceChildren(scroll);
+    } catch (error) {
+      renderMessage(body, `Unable to load departures: ${error.message}`, 'error-state');
+    }
+  };
+
+  select.addEventListener('change', () => loadStopTimetable(select.value));
+  await loadStopTimetable(select.value);
+}
+
+// Render the timetable view for the active route and variant.
+async function renderTimetable(routeId, shapeIdOverride = null) {
+  if (!routeTimetable) return;
+
+  const timetable = await loadRouteTimetableData();
+  if (timetable && timetable[routeId]) {
+    renderStaticTimetable(timetable[routeId]);
+    return;
+  }
+
+  await renderLiveTimetable(routeId, shapeIdOverride);
+}
+
+// Render the timetable on demand. The live fallback hits the arrivals API, so
+// we avoid that work until the user actually opens the Timetable tab.
+async function renderTimetableIfNeeded() {
+  if (timetableRendered || !currentRouteNum) return;
+  timetableRendered = true;
+  renderLoading(routeTimetable);
+  await renderTimetable(currentRouteNum, currentShapeId);
+}
+
+// Switch between the map, stops table, and timetable views
 function setRouteView(view) {
-  currentRouteView = view === 'table' ? 'table' : 'map';
+  const valid = ['map', 'table', 'timetable'];
+  currentRouteView = valid.includes(view) ? view : 'map';
+  const showMap = currentRouteView === 'map';
   const showTable = currentRouteView === 'table';
+  const showTimetable = currentRouteView === 'timetable';
 
   if (routeMapContainer) {
-    routeMapContainer.style.display = showTable ? 'none' : 'block';
+    routeMapContainer.style.display = showMap ? 'block' : 'none';
   }
   if (routeStopsTable) {
     routeStopsTable.style.display = showTable ? 'block' : 'none';
   }
+  if (routeTimetable) {
+    routeTimetable.style.display = showTimetable ? 'block' : 'none';
+  }
 
-  if (routeViewMapBtn) {
-    routeViewMapBtn.classList.toggle('is-active', !showTable);
-    routeViewMapBtn.setAttribute('aria-selected', String(!showTable));
-  }
-  if (routeViewTableBtn) {
-    routeViewTableBtn.classList.toggle('is-active', showTable);
-    routeViewTableBtn.setAttribute('aria-selected', String(showTable));
-  }
+  const toggles = [
+    [routeViewMapBtn, showMap],
+    [routeViewTableBtn, showTable],
+    [routeViewTimetableBtn, showTimetable],
+  ];
+  toggles.forEach(([btn, active]) => {
+    if (!btn) return;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', String(active));
+  });
 
   // Leaflet needs a size recalculation when the map becomes visible again
-  if (!showTable && routeMap) {
+  if (showMap && routeMap) {
     setTimeout(() => routeMap.invalidateSize(), 100);
+  }
+
+  // Build the timetable the first time its tab is opened.
+  if (showTimetable) {
+    renderTimetableIfNeeded();
   }
 }
 
 routeViewMapBtn?.addEventListener('click', () => setRouteView('map'));
 routeViewTableBtn?.addEventListener('click', () => setRouteView('table'));
+routeViewTimetableBtn?.addEventListener('click', () => setRouteView('timetable'));
 
 // Map instance for vehicle tracking
 let vehicleMap = null;
@@ -1993,6 +2298,13 @@ async function handleVariantChange() {
   await drawRoutePath(currentRouteNum, selectedShapeId);
   await addRouteStops(currentRouteNum, selectedShapeId);
   await renderStopsTable(currentRouteNum, selectedShapeId);
+
+  // The timetable depends on the active variant; rebuild it if it's on screen,
+  // otherwise mark it stale so it rebuilds when the tab is next opened.
+  timetableRendered = false;
+  if (currentRouteView === 'timetable') {
+    await renderTimetableIfNeeded();
+  }
 }
 
 // Add event listener for variant selector
@@ -2037,6 +2349,8 @@ routeForm?.addEventListener("submit", async (event) => {
       // Add stop markers and build the stops table for the active variant
       await addRouteStops(routeNum, currentShapeId);
       await renderStopsTable(routeNum, currentShapeId);
+      // The timetable is rebuilt lazily when its tab is shown (see setRouteView).
+      timetableRendered = false;
       showRouteMap();
       // Reveal the map/table toggle and honor the current view selection
       if (routeViewToggle) {
