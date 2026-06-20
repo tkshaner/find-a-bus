@@ -49,7 +49,8 @@ Conversion scripts:
 - `convert_stops.py`
 - `convert_route_shapes.py`
 - `convert_route_stops.py`
-- `convert_timetable.py` (optional planned timetable, see below)
+- `convert_route_schedules.py` (per-route, per-stop planned timetables, see below)
+- `convert_timetable.py` (legacy origin-only timetable, superseded; see below)
 
 Recommended refresh flow:
 
@@ -59,23 +60,48 @@ unzip -o gtfs/google_transit.zip -d gtfs
 python3 convert_stops.py
 python3 convert_route_shapes.py
 python3 convert_route_stops.py
-python3 convert_timetable.py   # optional: generates route-timetable.json
+python3 convert_route_schedules.py   # generates schedules/routes/<route>.json
 ```
 
-## Planned Timetable (`route-timetable.json`)
+## Planned Timetable (`schedules/routes/<route>.json`)
 
-`convert_timetable.py` implements opportunity #4 below in a size-controlled
-way. Instead of shipping the 70 MB `stop_times.txt`, it distills the schedule
-down to the **scheduled departure time at the origin of every trip**, grouped
-by route, service day (Weekday / Saturday / Sunday), and direction/headsign.
-The result is a compact `route-timetable.json` (a few hundred KB) keyed by
-`route_short_name`, matching the other generated assets.
+`convert_route_schedules.py` implements opportunity #4 below in a size-controlled
+way. Instead of shipping the 70 MB `stop_times.txt`, it keeps the **scheduled
+time at every stop along every trip**, grouped by route, service day
+(Weekday / Saturday / Sunday / Other), and direction/headsign.
 
-The website's Timetable tab loads this file when present. The file is
-**optional**: when it is absent the Timetable tab falls back to live scheduled
-departures from TheBus arrivals API, so the feature works before the static
-schedule has been generated. Because `route-timetable.json` is derived from the
-GTFS feed, regenerate it whenever you refresh the feed.
+A single combined file would be ~9 MB, so the output is **split into one file
+per route** under `schedules/routes/` (about 80 KB on average, ~570 KB for the
+busiest route). The website's route view already selects a route before the
+Timetable tab opens, so the browser only ever fetches the one file it needs; the
+stop selector then filters within it client-side.
+
+Each file is keyed nothing (one route per file) and named after the route's
+`route_short_name`, matching the route key the website already uses. Schema:
+
+```jsonc
+{
+  "id": "1", "name": "1", "long_name": "Kaimuki-Kalihi",
+  "services": {
+    "Weekday": [
+      {
+        "headsign": "...", "direction_id": "0", "origin": "<first stop>",
+        "stops": [ { "id": "...", "code": "...", "name": "...", "times": ["05:10", ...] } ]
+      }
+    ]
+  }
+}
+```
+
+These files are **optional**: when the file for a route is absent the Timetable
+tab falls back to live scheduled departures from TheBus arrivals API, so the
+feature works before the static schedule has been generated. Because they are
+derived from the GTFS feed, regenerate them whenever you refresh the feed.
+
+`convert_timetable.py` is the earlier, origin-only variant that produced a single
+compact `route-timetable.json`. It is **superseded** by the per-stop output above
+and is no longer read by the website; it is kept only as a smaller "first
+departure of each trip" summary if that is ever useful.
 
 ## Best Incorporation Opportunities
 

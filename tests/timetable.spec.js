@@ -27,11 +27,36 @@ test.describe('Route Timetable', () => {
     await expect(tabs).toHaveCount(3);
   });
 
-  test('should serve the optional planned timetable file when generated', async ({ page }) => {
-    // route-timetable.json is generated offline from GTFS and may be absent.
-    // The app must tolerate a 404 (and fall back to the live API view), so we
-    // only assert the response is either a valid file or a clean 404.
-    const response = await page.request.get('/route-timetable.json');
+  test('should serve the optional per-route schedule file when generated', async ({ page }) => {
+    // schedules/routes/<route>.json is generated offline from GTFS and may be
+    // absent. The app must tolerate a 404 (and fall back to the live API view),
+    // so we only assert the response is either a valid file or a clean 404.
+    const response = await page.request.get('/schedules/routes/1.json');
     expect([200, 404]).toContain(response.status());
+  });
+
+  test('per-route schedule files carry per-stop scheduled times', async ({ page }) => {
+    const response = await page.request.get('/schedules/routes/1.json');
+    if (response.status() === 404) {
+      test.skip(true, 'Static schedule not generated in this environment');
+      return;
+    }
+    const data = await response.json();
+    expect(data).toHaveProperty('services');
+
+    // Find any service-day with at least one direction block.
+    const block = Object.values(data.services)
+      .flat()
+      .find((b) => Array.isArray(b.stops) && b.stops.length > 0);
+    expect(block, 'a direction block with stops').toBeTruthy();
+
+    // Every stop carries an id/name and its own array of scheduled times.
+    const stop = block.stops[0];
+    expect(stop).toHaveProperty('id');
+    expect(stop).toHaveProperty('name');
+    expect(Array.isArray(stop.times)).toBe(true);
+    expect(stop.times.length).toBeGreaterThan(0);
+    // Times are normalized HH:MM.
+    expect(stop.times[0]).toMatch(/^\d{2}:\d{2}$/);
   });
 });

@@ -7,21 +7,26 @@
   line-height: 1.55;
   --page-gutter: 1rem;
   --page-max-width: 1180px;
-  --color-bg: #f4f7f8;
+  /* Island palette: sandy shores, lagoon water, sunset sky */
+  --color-bg: #fbf4ea;
   --color-surface: #ffffff;
-  --color-surface-elevated: #eef4f2;
-  --color-surface-info: #e8f0ff;
-  --color-border: #1f2a2e;
-  --color-border-muted: #c8d3d0;
-  --color-border-strong: #d84a3a;
-  --color-text: #172024;
-  --color-text-muted: #5a666a;
+  --color-surface-elevated: #fdf3e6;
+  --color-surface-info: #e1f3f1;
+  --color-border: #1c2b2e;
+  --color-border-muted: #ddd0bd;
+  --color-border-strong: #ef5b3c;
+  --color-text: #1d2a2c;
+  --color-text-muted: #5f6a64;
   --color-text-inverse: #ffffff;
-  --color-primary: #0b6f7a;
-  --color-primary-accent: #172024;
-  --color-secondary: #d84a3a;
-  --color-success: #2f7d4f;
-  --color-shadow: rgba(31, 42, 46, 0.12);
+  --color-primary: #0a7d88;
+  --color-primary-accent: #123b3f;
+  --color-secondary: #ef5b3c;
+  --color-success: #1f9d57;
+  --color-tertiary: #f6a01f;
+  --color-accent: #e9457b;
+  --color-shadow: rgba(28, 43, 46, 0.14);
+  /* Sunset over the ocean → warm sand */
+  --hero-gradient: linear-gradient(165deg, #d7f1ee 0%, #fdeedd 55%, #ffe1c9 100%);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   background-color: var(--color-bg);
@@ -29,21 +34,25 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-bg: #101516;
-  --color-surface: #171e20;
-  --color-surface-elevated: #20292b;
-  --color-surface-info: rgba(64, 111, 190, 0.25);
-  --color-border: #dce5e3;
-  --color-border-muted: #3d4a4d;
-  --color-border-strong: #ff7b68;
-  --color-text: #eef6f5;
-  --color-text-muted: rgba(238, 246, 245, 0.72);
-  --color-text-inverse: #0c1112;
-  --color-primary: #58c4ce;
-  --color-primary-accent: #eef6f5;
-  --color-secondary: #ff8b72;
-  --color-success: #74c69d;
-  --color-shadow: rgba(0, 0, 0, 0.35);
+  /* Deep ocean night under the stars */
+  --color-bg: #0a161a;
+  --color-surface: #0f1f24;
+  --color-surface-elevated: #16282d;
+  --color-surface-info: rgba(56, 198, 208, 0.18);
+  --color-border: #d9e6e3;
+  --color-border-muted: #2f4248;
+  --color-border-strong: #ff8163;
+  --color-text: #eaf6f4;
+  --color-text-muted: rgba(234, 246, 244, 0.72);
+  --color-text-inverse: #06141a;
+  --color-primary: #38c6d0;
+  --color-primary-accent: #eaf6f4;
+  --color-secondary: #ff8163;
+  --color-success: #5fd0a0;
+  --color-tertiary: #ffc24d;
+  --color-accent: #ff77a9;
+  --color-shadow: rgba(0, 0, 0, 0.4);
+  --hero-gradient: linear-gradient(165deg, #0c2a31 0%, #10222b 60%, #16202b 100%);
 }
 
 * {
@@ -75,10 +84,30 @@ a:focus-visible {
 }
 
 .hero {
-  padding: 1rem 0 1.75rem;
+  position: relative;
+  padding: 1rem 0 2rem;
   color: var(--color-text);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border-muted);
+  background: var(--hero-gradient);
+}
+
+/* Ocean wave lapping the bottom edge of the sunset hero */
+.hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 14px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--color-primary),
+    color-mix(in srgb, var(--color-primary), var(--color-secondary) 35%)
+  );
+  -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20200%2014'%20preserveAspectRatio='none'%3E%3Cpath%20d='M0%207C16.7%200%2033.3%2014%2050%207C66.7%200%2083.3%2014%20100%207C116.7%200%20133.3%2014%20150%207C166.7%200%20183.3%2014%20200%207L200%2014L0%2014Z'%20fill='%23000'/%3E%3C/svg%3E")
+    repeat-x bottom / 200px 14px;
+  mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20200%2014'%20preserveAspectRatio='none'%3E%3Cpath%20d='M0%207C16.7%200%2033.3%2014%2050%207C66.7%200%2083.3%2014%20100%207C116.7%200%20133.3%2014%20150%207C166.7%200%20183.3%2014%20200%207L200%2014L0%2014Z'%20fill='%23000'/%3E%3C/svg%3E")
+    repeat-x bottom / 200px 14px;
 }
 
 .hero__toolbar,
@@ -527,7 +556,11 @@ dd {
   min-width: 2.4rem;
   padding: 0.3rem 0.5rem;
   border-radius: 7px;
-  background: var(--color-primary);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    color-mix(in srgb, var(--color-primary), #06343a 35%) 100%
+  );
   color: var(--color-text-inverse);
   font-size: 1.05rem;
   font-weight: 700;
@@ -842,9 +875,23 @@ dd {
   color: var(--color-text);
 }
 
+.timetable-block__stop {
+  margin: 0.5rem 0 0.6rem;
+  max-width: 100%;
+}
+
+.timetable-block__stop .input-group {
+  margin: 0;
+}
+
 .timetable-block__meta {
   margin: 0.15rem 0 0.6rem;
   font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.timetable-empty {
+  font-size: 0.82rem;
   color: var(--color-text-muted);
 }
 

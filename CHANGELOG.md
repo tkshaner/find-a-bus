@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Per-Stop Planned Timetable**: The static Timetable tab now shows scheduled
+  times at *any* stop along the route, not just the trip origin
+  - New `convert_route_schedules.py` keeps the scheduled time at every stop of
+    every trip, split into one file per route under `schedules/routes/<route>.json`
+    (~80 KB average; a single combined file would be ~9 MB) so the browser only
+    fetches the one route it is viewing
+  - Each direction block gains a stop selector; picking a stop shows when each
+    trip reaches it. Defaults to the origin, so the prior view is preserved
+  - The app lazy-loads `schedules/routes/<route>.json` for the active route and
+    still falls back to the live arrivals API when no static file exists
+  - Supersedes the origin-only `route-timetable.json`/`convert_timetable.py`
+    (kept as a legacy summary); docs and Playwright coverage updated
 - **Compact Vehicle Tracking Cards (mobile)**: Applied the same compact
   layout to the "Track a Vehicle" results
   - Route badge + headsign as the title, with the vehicle number as a small

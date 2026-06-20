@@ -546,8 +546,9 @@ const templates = {
 let routeMap = null;
 let routeShapesData = null;
 let routeStopsData = null;
-let routeTimetableData = null;
-let routeTimetableMissing = false;
+// Per-route planned schedules are lazy-loaded from schedules/routes/{route}.json
+// and cached here. A route mapped to `null` was fetched but has no static file.
+const routeScheduleCache = new Map();
 let timetableRendered = false;
 let routePolyline = null;
 let routeStopMarkers = [];
@@ -608,29 +609,28 @@ async function loadRouteStopsData() {
   }
 }
 
-// Load the planned timetable data (generated offline from GTFS by
-// convert_timetable.py). This file is optional: when it is missing the
-// Timetable view falls back to live scheduled departures from the API.
-async function loadRouteTimetableData() {
-  if (routeTimetableData) {
-    return routeTimetableData;
-  }
-  if (routeTimetableMissing) {
-    return null;
+// Load the planned per-stop schedule for a single route (generated offline from
+// GTFS by convert_route_schedules.py). These files are optional: when one is
+// missing the Timetable view falls back to live scheduled departures from the
+// API. Only the file for the route being viewed is fetched.
+async function loadRouteSchedule(routeId) {
+  if (routeScheduleCache.has(routeId)) {
+    return routeScheduleCache.get(routeId);
   }
 
   try {
-    const response = await fetch('route-timetable.json');
+    const response = await fetch(`schedules/routes/${encodeURIComponent(routeId)}.json`);
     if (!response.ok) {
       // 404 simply means the static schedule has not been generated yet.
-      routeTimetableMissing = true;
+      routeScheduleCache.set(routeId, null);
       return null;
     }
-    routeTimetableData = await response.json();
-    return routeTimetableData;
+    const data = await response.json();
+    routeScheduleCache.set(routeId, data);
+    return data;
   } catch (error) {
-    console.warn('Planned timetable data unavailable:', error);
-    routeTimetableMissing = true;
+    console.warn(`Planned schedule unavailable for route ${routeId}:`, error);
+    routeScheduleCache.set(routeId, null);
     return null;
   }
 }
@@ -914,7 +914,10 @@ function currentServiceCategory() {
   return 'Weekday';
 }
 
-// Render the planned timetable for a single direction/headsign block.
+// Render the planned timetable for a single direction/headsign block. When the
+// block carries per-stop data, a stop selector lets the rider see scheduled
+// times at any stop along the trip (defaulting to the origin). Older
+// origin-only blocks (a bare `times` array) are still supported.
 function buildTimetableBlock(block) {
   const wrapper = document.createElement('div');
   wrapper.className = 'timetable-block';
@@ -927,19 +930,64 @@ function buildTimetableBlock(block) {
 
   const meta = document.createElement('p');
   meta.className = 'timetable-block__meta';
-  meta.textContent = `${block.times.length} scheduled departure${block.times.length === 1 ? '' : 's'}`;
-  wrapper.appendChild(meta);
 
   const times = document.createElement('div');
   times.className = 'timetable-times';
-  block.times.forEach((time) => {
-    const chip = document.createElement('span');
-    chip.className = 'timetable-time';
-    chip.textContent = formatScheduleTime(time);
-    times.appendChild(chip);
-  });
-  wrapper.appendChild(times);
 
+  const renderTimes = (list) => {
+    const count = list.length;
+    meta.textContent = `${count} scheduled departure${count === 1 ? '' : 's'}`;
+    times.replaceChildren();
+    if (count === 0) {
+      const empty = document.createElement('span');
+      empty.className = 'timetable-empty';
+      empty.textContent = 'No scheduled departures at this stop.';
+      times.appendChild(empty);
+      return;
+    }
+    list.forEach((time) => {
+      const chip = document.createElement('span');
+      chip.className = 'timetable-time';
+      chip.textContent = formatScheduleTime(time);
+      times.appendChild(chip);
+    });
+  };
+
+  const stops = Array.isArray(block.stops) ? block.stops : null;
+  if (stops && stops.length > 0) {
+    const controls = document.createElement('div');
+    controls.className = 'timetable-block__stop';
+    const label = document.createElement('label');
+    label.className = 'input-group';
+    const labelText = document.createElement('span');
+    labelText.textContent = 'Stop';
+    const select = document.createElement('select');
+    select.className = 'variant-select';
+    stops.forEach((stop, index) => {
+      const option = document.createElement('option');
+      option.value = String(index);
+      option.textContent = `${index + 1}. ${stop.name || stop.code || 'Stop'}`;
+      select.appendChild(option);
+    });
+    label.append(labelText, select);
+    controls.appendChild(label);
+    wrapper.appendChild(controls);
+
+    select.addEventListener('change', () => {
+      const stop = stops[Number(select.value)] || stops[0];
+      renderTimes(stop.times || []);
+    });
+
+    wrapper.appendChild(meta);
+    wrapper.appendChild(times);
+    renderTimes(stops[0].times || []);
+    return wrapper;
+  }
+
+  // Backward-compatible origin-only block.
+  wrapper.appendChild(meta);
+  wrapper.appendChild(times);
+  renderTimes(Array.isArray(block.times) ? block.times : []);
   return wrapper;
 }
 
@@ -964,7 +1012,7 @@ function renderStaticTimetable(routeEntry) {
 
   const note = document.createElement('p');
   note.className = 'timetable-note';
-  note.textContent = 'Scheduled departure times from the start of each trip (static GTFS schedule).';
+  note.textContent = 'Scheduled times from the static GTFS schedule. Pick a stop to see when each trip reaches it.';
   container.appendChild(note);
 
   // Service-day toggle (Weekday / Saturday / Sunday), defaulting to today.
@@ -1128,9 +1176,9 @@ async function renderLiveTimetable(routeId, shapeIdOverride = null) {
 async function renderTimetable(routeId, shapeIdOverride = null) {
   if (!routeTimetable) return;
 
-  const timetable = await loadRouteTimetableData();
-  if (timetable && timetable[routeId]) {
-    renderStaticTimetable(timetable[routeId]);
+  const routeEntry = await loadRouteSchedule(routeId);
+  if (routeEntry) {
+    renderStaticTimetable(routeEntry);
     return;
   }
 
