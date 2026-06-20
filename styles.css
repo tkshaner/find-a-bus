@@ -5,6 +5,9 @@
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 16px;
   line-height: 1.55;
+  /* Stop iOS/Safari from inflating text and widening the layout in landscape */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   --page-gutter: 1rem;
   --page-max-width: 1180px;
   /* Island palette: sandy shores, lagoon water, sunset sky */
@@ -59,15 +62,29 @@
   box-sizing: border-box;
 }
 
+/*
+ * Clip horizontal overflow at the document root so a stray wide element
+ * (e.g. a map or long unbreakable string) can't widen the mobile layout
+ * viewport, which makes the page float/pan sideways and snap narrower than
+ * the screen on zoom. `clip` (vs `hidden`) doesn't create a scroll
+ * container, so it leaves `position: sticky` working.
+ */
+html {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 body {
   margin: 0;
+  width: 100%;
+  max-width: 100%;
   color: var(--color-text);
   background:
     linear-gradient(180deg, var(--color-surface) 0, var(--color-bg) 360px),
     var(--color-bg);
   font-size: 1rem;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 a {
