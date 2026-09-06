@@ -8,16 +8,16 @@ async function setup(page, proxy = true) {
 
 const lookups = [
   { name: 'route', input: '#routeNumber', value: '2', form: '#routeForm', result: '#routeResults', endpoint: '/routeJSON/' },
-  { name: 'arrivals', input: '#stopNumber', value: '45', form: '#arrivalsForm', result: '#arrivalsResults', endpoint: '/arrivalsJSON/' },
+  { name: 'arrivals', input: '#stopNumber', value: '45', form: '#arrivalsForm', result: '#arrivalsResults', endpoint: '/arrivals/' },
   { name: 'vehicle', input: '#vehicleNumber', value: '249', form: '#vehicleForm', result: '#vehicleResults', endpoint: '/vehicle/' },
-  { name: 'destination', input: '#destinationSearch', value: '21.3, -157.85', form: '#towardDestinationForm', result: '#towardDestinationResults', endpoint: '/arrivalsJSON/' }
+  { name: 'destination', input: '#destinationSearch', value: '21.3, -157.85', form: '#towardDestinationForm', result: '#towardDestinationResults', endpoint: '/arrivals/' }
 ];
 
 for (const lookup of lookups) {
-  test(`${lookup.name} preserves proxy 401 without exposing secrets or retrying direct`, async ({ page }) => {
+  test(`${lookup.name} preserves 401 using its designated transport without exposing secrets`, async ({ page }) => {
     let direct = 0;
     const requests = [];
-    await page.route('https://api.thebus.org/**', route => { direct++; return route.abort(); });
+    await page.route('https://api.thebus.org/**', route => { direct++; requests.push(route.request()); return route.fulfill({ status: 401, body: 'Unauthorized' }); });
     await page.route('https://corsproxy.io/**', route => {
       requests.push(route.request());
       return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Invalid key test-key-private-12345', status: 401 } }) });
@@ -29,12 +29,12 @@ for (const lookup of lookups) {
     const result = page.locator(lookup.result);
     await expect(result).toContainText('HTTP 401');
     await expect(result).toContainText(lookup.endpoint);
-    await expect(result).toContainText('corsproxy.io requires its own API key');
+    await expect(result).toContainText(lookup.name === 'vehicle' ? 'corsproxy.io requires its own API key' : 'TheBus rejected authentication');
     await expect(result).not.toContainText('test-key-private-12345');
-    expect(direct).toBe(0);
+    expect(direct).toBe(lookup.name === 'vehicle' ? 0 : 1);
     expect(requests).toHaveLength(1);
     expect(requests[0].headers()['x-requested-with']).toBeUndefined();
-    const upstream = new URL(new URL(requests[0].url()).searchParams.get('url'));
+    const upstream = lookup.name === 'vehicle' ? new URL(new URL(requests[0].url()).searchParams.get('url')) : new URL(requests[0].url());
     expect(upstream.pathname).toBe(lookup.endpoint);
     expect(upstream.searchParams.get('key')).toBe('test-key-private-12345');
   });
@@ -60,11 +60,11 @@ for (const status of [403, 429, 502]) {
 }
 
 test('network failure is distinguished from HTTP failure', async ({ page }) => {
-  await page.route('https://corsproxy.io/**', route => route.abort('failed'));
+  await page.route('https://api.thebus.org/**', route => route.abort('failed'));
   await setup(page);
   await page.fill('#stopNumber', '45');
   await page.click('#arrivalsForm button[type="submit"]');
-  await expect(page.locator('#arrivalsResults')).toContainText('could not reach or read the proxy response');
+  await expect(page.locator('#arrivalsResults')).toContainText('could not reach or read TheBus response');
 });
 
 for (const body of ['<html>Login page</html>', '<unexpected/>', '<vehicles><vehicle>']) {
@@ -96,7 +96,7 @@ test('a stalled request times out with a safe diagnostic', async ({ page }) => {
   await page.clock.install();
   let started;
   const requested = new Promise(resolve => { started = resolve; });
-  await page.route('https://corsproxy.io/**', () => { started(); });
+  await page.route('https://api.thebus.org/**', () => { started(); });
   await setup(page);
   await page.fill('#stopNumber', '45');
   await page.click('#arrivalsForm button[type="submit"]');
@@ -107,11 +107,11 @@ test('a stalled request times out with a safe diagnostic', async ({ page }) => {
 
 for (const body of ['<html>Login</html>', '{broken', 'null', '{"errorMessage":"test-key-private-12345"}']) {
   test(`JSON failures do not leak response content: ${body}`, async ({ page }) => {
-    await page.route('https://corsproxy.io/**', route => route.fulfill({ body }));
+    await page.route('https://api.thebus.org/**', route => route.fulfill({ body }));
     await setup(page);
-    await page.fill('#stopNumber', '45');
-    await page.click('#arrivalsForm button[type="submit"]');
-    await expect(page.locator('#arrivalsResults .error-state')).toBeVisible();
-    await expect(page.locator('#arrivalsResults')).not.toContainText('test-key-private-12345');
+    await page.fill('#routeNumber', '2');
+    await page.click('#routeForm button[type="submit"]');
+    await expect(page.locator('#routeResults .error-state')).toBeVisible();
+    await expect(page.locator('#routeResults')).not.toContainText('test-key-private-12345');
   });
 }

@@ -1701,7 +1701,7 @@ async function fetchArrivalsForStopCached(stopId) {
   const now = Date.now();
   const cached = arrivalsCache.get(stopId);
   if (cached && now - cached.ts < ARRIVALS_CACHE_TTL_MS) return cached.arrivals;
-  const data = await fetchFromApi("/arrivalsJSON/", { stop: stopId });
+  const data = await fetchFromApi("/arrivals/", { stop: stopId });
   const arrivals = data?.arrivals || [];
   arrivalsCache.set(stopId, { ts: now, arrivals });
   return arrivals;
@@ -1729,14 +1729,18 @@ async function fetchArrivalsForStops(stops) {
 }
 
 function parseArrivalWaitMinutes(arrival) {
-  const direct = Number(arrival?.stopTime);
-  if (Number.isFinite(direct) && direct >= 0) return direct;
-  const possible = [arrival?.arriveTime, arrival?.arrival_time, arrival?.scheduled_arrival_time].filter(Boolean);
-  for (const value of possible) {
-    const t = Date.parse(value);
-    if (!Number.isNaN(t)) return Math.max(0, Math.round((t - Date.now()) / 60000));
-  }
-  return 240;
+  // TheBus dates/times are Honolulu wall time (UTC-10, with no DST).
+  const date = String(arrival?.date || arrival?.Date || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const clock = String(arrival?.stopTime || '').trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (!date || !clock) return null;
+  const [, month, day, year] = date.map(Number);
+  const hour = Number(clock[1]), minute = Number(clock[2]), second = Number(clock[3] || 0);
+  if (hour < 1 || hour > 12 || minute > 59 || second > 59 || month < 1 || month > 12 || day < 1) return null;
+  const calendar = new Date(Date.UTC(year, month - 1, day));
+  if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 || calendar.getUTCDate() !== day) return null;
+  const hour24 = hour % 12 + (clock[4].toUpperCase() === 'PM' ? 12 : 0);
+  const timestamp = Date.UTC(year, month - 1, day, hour24 + 10, minute, second);
+  return Math.max(0, Math.round((timestamp - Date.now()) / 60000));
 }
 
 function renderTowardDestinationError(message) { renderMessage(towardDestinationResults, message, 'error-state'); }
@@ -1795,7 +1799,7 @@ async function geocodeDestinationSearch(query) {
 
 function getArrivalWaitLabel(arrival) {
   const minutes = parseArrivalWaitMinutes(arrival);
-  return Number.isFinite(minutes) && minutes < 240 ? `${minutes} min` : "Scheduled time unavailable";
+  return Number.isFinite(minutes) ? (minutes === 0 ? "Due" : `${minutes} min`) : "Scheduled time unavailable";
 }
 
 function renderDestinationNearbyResults(destination, stopArrivalSets, radiusMiles, updatedAt) {
@@ -1812,7 +1816,7 @@ function renderDestinationNearbyResults(destination, stopArrivalSets, radiusMile
   stopArrivalSets.forEach(({ stop, stopId, arrivals }) => {
     const activeArrivals = arrivals
       .filter((arrival) => String(arrival?.canceled) !== "1")
-      .sort((a, b) => parseArrivalWaitMinutes(a) - parseArrivalWaitMinutes(b))
+      .sort((a, b) => (parseArrivalWaitMinutes(a) ?? Infinity) - (parseArrivalWaitMinutes(b) ?? Infinity))
       .slice(0, 3);
 
     const card = document.createElement("article");
@@ -1977,7 +1981,7 @@ function renderCard(container, template, data) {
     let didSetCustomValue = false;
 
     if (key === "estimated") {
-      value = data[key] ? "Real-time update" : "Scheduled only";
+      value = String(data[key]) === "1" ? "Real-time update" : "Scheduled only";
     }
     if (key === "canceled") {
       // canceled values: 0 = active, 1 = canceled, -1 = was canceled but restored
@@ -1994,10 +1998,8 @@ function renderCard(container, template, data) {
       value = formatAdherence(value);
     }
     if (key === "stopTime" && value !== undefined && value !== null && value !== "") {
-      const mins = Number(value);
-      if (Number.isFinite(mins)) {
-        value = mins <= 0 ? "Due" : `${mins} min`;
-      }
+      const mins = parseArrivalWaitMinutes(data);
+      if (mins !== null) value = mins === 0 ? "Due" : `${mins} min`;
     }
 
     if (key === "vehicle" && value !== undefined && value !== null && value !== "") {
@@ -2053,6 +2055,18 @@ function createProxyUrl(url) {
   return template
     .replaceAll("{url}", encodeURIComponent(url))
     .replaceAll("{url_raw}", url);
+}
+
+// Preserve TheBus field strings (especially IDs and flags) for existing views.
+function parseArrivalsXML(xml) {
+  const root = xml.documentElement;
+  const text = (name) => Array.from(root.children).find(el => el.tagName === name)?.textContent.trim() || '';
+  return {
+    stop: text('stop'),
+    timestamp: text('timestamp'),
+    arrivals: Array.from(root.children).filter(el => el.tagName === 'arrival').map(el =>
+      Object.fromEntries(Array.from(el.children).map(field => [field.tagName, field.textContent.trim()])))
+  };
 }
 
 // Parse XML vehicle response and convert to JSON format
@@ -2118,28 +2132,8 @@ function buildTripDetailsSummary(tripId, tripInfo) {
   return tripId ? `Trip ${tripId}: ${details.join(" • ")}` : details.join(" • ");
 }
 
-async function enrichVehiclesWithTripDetails(vehicles) {
-  return Promise.all(vehicles.map(async ({ vehicle }) => {
-    const normalizedVehicle = vehicle ?? {};
-    const tripId = normalizedVehicle.trip;
-
-    if (!tripId) {
-      return { vehicle: { ...normalizedVehicle, trip_details: "—" } };
-    }
-
-    try {
-      const tripData = await fetchFromApi("/trip/", { trip: tripId });
-      const tripInfo = Array.isArray(tripData?.trip) ? tripData.trip[0] : tripData?.trip;
-      const tripDetails = buildTripDetailsSummary(tripId, tripInfo);
-      return { vehicle: { ...normalizedVehicle, trip_details: tripDetails } };
-    } catch (error) {
-      return { vehicle: { ...normalizedVehicle, trip_details: `Trip ${tripId} (details unavailable)` } };
-    }
-  }));
-}
-
-// Each lookup uses exactly one transport. A configured proxy is explicit on
-// every host; authentication, HTTP and parsing errors never switch transport.
+// Routes and arrivals have verified direct CORS support. Only vehicle lookup
+// uses the configured proxy; do not fall back to third parties silently.
 const API_REQUEST_TIMEOUT_MS = 20000;
 
 function apiRequestError(path, viaProxy, kind, status = null, publicProxy = false) {
@@ -2184,7 +2178,11 @@ async function fetchFromApi(path, params = {}) {
   if (!validation.valid) throw new Error(validation.message);
 
   const template = getProxyTemplate().trim();
-  const viaProxy = Boolean(template);
+  const viaProxy = path === '/vehicle/' && Boolean(template);
+  if (path === '/vehicle/' && !viaProxy) {
+    throw new Error('Vehicle lookup requires a trusted proxy. Configure one in Advanced API settings. Routes and arrivals work directly without a proxy.');
+  }
+  const xmlRoot = { '/arrivals/': 'stopTimes', '/vehicle/': 'vehicles' }[path];
   if (viaProxy && !isValidProxyTemplate(template)) {
     throw new Error('Proxy template must include {url} or {url_raw}.');
   }
@@ -2200,7 +2198,7 @@ async function fetchFromApi(path, params = {}) {
   try {
     // Accept is CORS-safelisted; do not add vehicle-only preflight headers.
     const response = await fetch(viaProxy ? createProxyUrl(url.toString()) : url.toString(), {
-      headers: { Accept: path.includes('/vehicle') ? 'application/xml, text/xml' : 'application/json' },
+      headers: { Accept: xmlRoot ? 'application/xml, text/xml' : 'application/json' },
       signal: controller.signal
     });
     if (!response.ok) throw fail('http', response.status);
@@ -2208,15 +2206,13 @@ async function fetchFromApi(path, params = {}) {
     if (!body.trim()) throw fail('format');
     let data;
     try {
-      if (path.includes('/vehicle')) {
+      if (xmlRoot) {
         const xml = new DOMParser().parseFromString(body, 'text/xml');
-        if (xml.querySelector('parsererror') || xml.documentElement?.tagName.toLowerCase() === 'html') {
+        if (xml.querySelector('parsererror') || xml.documentElement?.tagName !== xmlRoot) {
           throw fail('format');
         }
-        if (xml.querySelector('errorMessage, error')) throw fail('api');
-        // An empty vehicles collection is valid; an arbitrary XML document is not.
-        if (!xml.querySelector('vehicles, vehicle')) throw fail('format');
-        data = parseVehicleXML(body);
+        if (Array.from(xml.querySelectorAll('errorMessage, error')).some(el => el.textContent.trim())) throw fail('api');
+        data = path === '/arrivals/' ? parseArrivalsXML(xml) : parseVehicleXML(body);
       } else {
         data = JSON.parse(body);
         if (!data || typeof data !== 'object' || Array.isArray(data)) throw fail('format');
@@ -2386,7 +2382,9 @@ vehicleForm?.addEventListener("submit", async (event) => {
   try {
     // Note: /vehicle endpoint returns XML, not JSON
     const data = await fetchFromApi("/vehicle/", { num });
-    const vehicles = await enrichVehiclesWithTripDetails(data.vehicles ?? []);
+    const vehicles = (data.vehicles ?? []).map(({ vehicle }) => ({
+      vehicle: { ...vehicle, trip_details: buildTripDetailsSummary(vehicle?.trip, vehicle) }
+    }));
 
     if (vehicles.length === 0) {
       renderMessage(vehicleResults, "No vehicle data available. Check the vehicle number and try again.");
@@ -2426,7 +2424,7 @@ arrivalsForm?.addEventListener("submit", async (event) => {
   renderLoading(arrivalsResults);
 
   try {
-    const data = await fetchFromApi("/arrivalsJSON/", { stop });
+    const data = await fetchFromApi("/arrivals/", { stop });
     const arrivals = data.arrivals ?? [];
 
     if (arrivals.length === 0) {

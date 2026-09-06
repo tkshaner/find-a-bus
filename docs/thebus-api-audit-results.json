@@ -1,0 +1,615 @@
+{
+  "audited_at_utc": "2026-09-06T03:16:58.230668+00:00",
+  "method": "Local browser CORS checks plus server-side HTTPS probes with explicit Origin headers; no actual GitHub Pages browser execution. Redirects not followed. No keys or raw response bodies retained.",
+  "browser_results": [
+    {
+      "path": "/routeJSON/",
+      "status": 200,
+      "api_error": false,
+      "result": "Readable JSON"
+    },
+    {
+      "path": "/arrivalsJSON/",
+      "result": "TypeError; response unreadable"
+    },
+    {
+      "path": "/vehicleJSON/",
+      "result": "TypeError; response unreadable"
+    },
+    {
+      "path": "/route/",
+      "result": "TypeError; response unreadable"
+    },
+    {
+      "path": "/arrivals/",
+      "status": 200,
+      "api_error": false,
+      "arrival_count": 25,
+      "result": "Readable XML"
+    },
+    {
+      "path": "/vehicle/",
+      "result": "TypeError; response unreadable"
+    }
+  ],
+  "server_results": [
+    {
+      "path": "/routeJSON/",
+      "params": {
+        "route": "2"
+      },
+      "origin": "http://127.0.0.1:8000",
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET",
+        "access-control-allow-origin": "*"
+      },
+      "bytes": 1773,
+      "format": "json",
+      "fields": [
+        "routeName",
+        "routeID",
+        "route"
+      ],
+      "counts": {
+        "route": 12
+      },
+      "api_error": false,
+      "seconds": 0.51
+    },
+    {
+      "path": "/routeJSON/",
+      "params": {
+        "route": "2"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET",
+        "access-control-allow-origin": "*"
+      },
+      "bytes": 1773,
+      "format": "json",
+      "fields": [
+        "routeName",
+        "routeID",
+        "route"
+      ],
+      "counts": {
+        "route": 12
+      },
+      "api_error": false,
+      "seconds": 0.53
+    },
+    {
+      "path": "/arrivalsJSON/",
+      "params": {
+        "stop": "45"
+      },
+      "origin": "http://127.0.0.1:8000",
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 6587,
+      "format": "json",
+      "fields": [
+        "stop",
+        "timestamp",
+        "arrivals"
+      ],
+      "counts": {
+        "arrivals": 25
+      },
+      "api_error": false,
+      "seconds": 0.43
+    },
+    {
+      "path": "/arrivalsJSON/",
+      "params": {
+        "stop": "45"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 6587,
+      "format": "json",
+      "fields": [
+        "stop",
+        "timestamp",
+        "arrivals"
+      ],
+      "counts": {
+        "arrivals": 25
+      },
+      "api_error": false,
+      "seconds": 0.56
+    },
+    {
+      "path": "/vehicleJSON/",
+      "params": {
+        "num": "249"
+      },
+      "origin": "http://127.0.0.1:8000",
+      "method": "GET",
+      "status": 404,
+      "headers": {
+        "content-type": "text/html",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 1245,
+      "format": "xml",
+      "root": "{http://www.w3.org/1999/xhtml}html",
+      "fields": [
+        "{http://www.w3.org/1999/xhtml}body",
+        "{http://www.w3.org/1999/xhtml}head"
+      ],
+      "api_error": false,
+      "counts": {
+        "route": 0,
+        "arrival": 0,
+        "vehicle": 0
+      },
+      "seconds": 0.2
+    },
+    {
+      "path": "/vehicleJSON/",
+      "params": {
+        "num": "249"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 404,
+      "headers": {
+        "content-type": "text/html",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 1245,
+      "format": "xml",
+      "root": "{http://www.w3.org/1999/xhtml}html",
+      "fields": [
+        "{http://www.w3.org/1999/xhtml}body",
+        "{http://www.w3.org/1999/xhtml}head"
+      ],
+      "api_error": false,
+      "counts": {
+        "route": 0,
+        "arrival": 0,
+        "vehicle": 0
+      },
+      "seconds": 0.39
+    },
+    {
+      "path": "/route/",
+      "params": {
+        "route": "2"
+      },
+      "origin": "http://127.0.0.1:8000",
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "text/xml",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 2334,
+      "format": "xml",
+      "root": "routes",
+      "fields": [
+        "route",
+        "routeID",
+        "routeName"
+      ],
+      "api_error": false,
+      "counts": {
+        "route": 12,
+        "arrival": 0,
+        "vehicle": 0
+      },
+      "seconds": 0.44
+    },
+    {
+      "path": "/route/",
+      "params": {
+        "route": "2"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "text/xml",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 2334,
+      "format": "xml",
+      "root": "routes",
+      "fields": [
+        "route",
+        "routeID",
+        "routeName"
+      ],
+      "api_error": false,
+      "counts": {
+        "route": 12,
+        "arrival": 0,
+        "vehicle": 0
+      },
+      "seconds": 0.49
+    },
+    {
+      "path": "/arrivals/",
+      "params": {
+        "stop": "45"
+      },
+      "origin": "http://127.0.0.1:8000",
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "text/xml",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET",
+        "access-control-allow-origin": "*"
+      },
+      "bytes": 8960,
+      "format": "xml",
+      "root": "stopTimes",
+      "fields": [
+        "arrival",
+        "stop",
+        "timestamp"
+      ],
+      "api_error": false,
+      "counts": {
+        "route": 0,
+        "arrival": 25,
+        "vehicle": 0
+      },
+      "sample_schema": {
+        "trip": "5353074",
+        "vehicle": "277",
+        "stopTime": "5:18 PM",
+        "date": "9/5/2026",
+        "estimated": "1",
+        "canceled": "0"
+      },
+      "seconds": 0.37
+    },
+    {
+      "path": "/arrivals/",
+      "params": {
+        "stop": "45"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "text/xml",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET",
+        "access-control-allow-origin": "*"
+      },
+      "bytes": 8960,
+      "format": "xml",
+      "root": "stopTimes",
+      "fields": [
+        "arrival",
+        "stop",
+        "timestamp"
+      ],
+      "api_error": false,
+      "counts": {
+        "route": 0,
+        "arrival": 25,
+        "vehicle": 0
+      },
+      "sample_schema": {
+        "trip": "5353074",
+        "vehicle": "277",
+        "stopTime": "5:18 PM",
+        "date": "9/5/2026",
+        "estimated": "1",
+        "canceled": "0"
+      },
+      "seconds": 0.44
+    },
+    {
+      "path": "/vehicle/",
+      "params": {
+        "num": "249"
+      },
+      "origin": "http://127.0.0.1:8000",
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "text/xml",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 399,
+      "format": "xml",
+      "root": "vehicles",
+      "fields": [
+        "timestamp",
+        "vehicle"
+      ],
+      "api_error": false,
+      "counts": {
+        "route": 0,
+        "arrival": 0,
+        "vehicle": 1
+      },
+      "seconds": 0.35
+    },
+    {
+      "path": "/vehicle/",
+      "params": {
+        "num": "249"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "text/xml",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 399,
+      "format": "xml",
+      "root": "vehicles",
+      "fields": [
+        "timestamp",
+        "vehicle"
+      ],
+      "api_error": false,
+      "counts": {
+        "route": 0,
+        "arrival": 0,
+        "vehicle": 1
+      },
+      "seconds": 0.33
+    },
+    {
+      "path": "/trip/",
+      "params": {
+        "trip": "5353074"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 404,
+      "headers": {
+        "content-type": "text/html",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 1245,
+      "format": "xml",
+      "root": "{http://www.w3.org/1999/xhtml}html",
+      "fields": [
+        "{http://www.w3.org/1999/xhtml}body",
+        "{http://www.w3.org/1999/xhtml}head"
+      ],
+      "api_error": false,
+      "counts": {
+        "route": 0,
+        "arrival": 0,
+        "vehicle": 0
+      },
+      "seconds": 0.14
+    },
+    {
+      "path": "/routeJSON",
+      "params": {
+        "route": "2"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 301,
+      "headers": {
+        "content-type": "text/html; charset=UTF-8",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET",
+        "access-control-allow-origin": "*"
+      },
+      "redirect": {
+        "scheme": "https",
+        "host": "api.thebus.org",
+        "path": "/routeJSON/"
+      },
+      "bytes": 209,
+      "format": "other",
+      "seconds": 0.21
+    },
+    {
+      "path": "/arrivalsJSON",
+      "params": {
+        "stop": "45"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 301,
+      "headers": {
+        "content-type": "text/html; charset=UTF-8",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "redirect": {
+        "scheme": "https",
+        "host": "api.thebus.org",
+        "path": "/arrivalsJSON/"
+      },
+      "bytes": 212,
+      "format": "other",
+      "seconds": 0.16
+    },
+    {
+      "path": "/vehicleJSON",
+      "params": {
+        "num": "249"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 404,
+      "headers": {
+        "content-type": "text/html",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 1245,
+      "format": "xml",
+      "root": "{http://www.w3.org/1999/xhtml}html",
+      "fields": [
+        "{http://www.w3.org/1999/xhtml}body",
+        "{http://www.w3.org/1999/xhtml}head"
+      ],
+      "api_error": false,
+      "counts": {
+        "route": 0,
+        "arrival": 0,
+        "vehicle": 0
+      },
+      "seconds": 0.16
+    },
+    {
+      "path": "/route",
+      "params": {
+        "route": "2"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 301,
+      "headers": {
+        "content-type": "text/html; charset=UTF-8",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "redirect": {
+        "scheme": "https",
+        "host": "api.thebus.org",
+        "path": "/route/"
+      },
+      "bytes": 205,
+      "format": "other",
+      "seconds": 0.15
+    },
+    {
+      "path": "/arrivals",
+      "params": {
+        "stop": "45"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 301,
+      "headers": {
+        "content-type": "text/html; charset=UTF-8",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET",
+        "access-control-allow-origin": "*"
+      },
+      "redirect": {
+        "scheme": "https",
+        "host": "api.thebus.org",
+        "path": "/arrivals/"
+      },
+      "bytes": 208,
+      "format": "other",
+      "seconds": 0.14
+    },
+    {
+      "path": "/vehicle",
+      "params": {
+        "num": "249"
+      },
+      "origin": "https://tkshaner.github.io",
+      "method": "GET",
+      "status": 301,
+      "headers": {
+        "content-type": "text/html; charset=UTF-8",
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "redirect": {
+        "scheme": "https",
+        "host": "api.thebus.org",
+        "path": "/vehicle/"
+      },
+      "bytes": 207,
+      "format": "other",
+      "seconds": 0.14
+    },
+    {
+      "path": "/routeJSON/",
+      "params": {},
+      "origin": "https://tkshaner.github.io",
+      "method": "OPTIONS",
+      "status": 200,
+      "headers": {
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET",
+        "access-control-allow-origin": "*"
+      },
+      "bytes": 0,
+      "format": "other",
+      "seconds": 0.17
+    },
+    {
+      "path": "/arrivalsJSON/",
+      "params": {},
+      "origin": "https://tkshaner.github.io",
+      "method": "OPTIONS",
+      "status": 200,
+      "headers": {
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 0,
+      "format": "other",
+      "seconds": 0.14
+    },
+    {
+      "path": "/arrivals/",
+      "params": {},
+      "origin": "https://tkshaner.github.io",
+      "method": "OPTIONS",
+      "status": 200,
+      "headers": {
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET",
+        "access-control-allow-origin": "*"
+      },
+      "bytes": 0,
+      "format": "other",
+      "seconds": 0.13
+    },
+    {
+      "path": "/vehicle/",
+      "params": {},
+      "origin": "https://tkshaner.github.io",
+      "method": "OPTIONS",
+      "status": 200,
+      "headers": {
+        "server": "Microsoft-IIS/8.5",
+        "x-powered-by": "ASP.NET"
+      },
+      "bytes": 0,
+      "format": "other",
+      "seconds": 0.16
+    }
+  ]
+}

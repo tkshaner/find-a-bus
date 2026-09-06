@@ -15,7 +15,7 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 - Enter your TheBus API key in the banner at the top of the page.
 - If you do not yet have a key, request one for free from the [TheBus developer portal](https://www.honolulutransit.org/).
 - **Security:** By default, your key is stored in `sessionStorage` and cleared when you close your browser tab. Check "Remember my key" to store it permanently in `localStorage`.
-- **Optional proxy template:** Leave blank for direct access. When configured, every TheBus request uses that proxy, on localhost and GitHub Pages alike. Provide your own proxy template URL in the UI, such as `https://your-proxy.example/?url={url}` or `https://your-worker.workers.dev/?url={url}`.
+- **Optional proxy template:** Routes and arrivals connect directly. Vehicle lookup requires a configured proxy, on localhost and GitHub Pages alike. Provide your own proxy template URL in the UI, such as `https://your-proxy.example/?url={url}` or `https://your-worker.workers.dev/?url={url}`.
 - **Important:** Only use free developer API keys. Never enter production or paid API keys into this application.
 
 ### 3. Explore transit data
@@ -158,9 +158,13 @@ For detailed testing documentation, see [TESTING.md](TESTING.md).
 
 ## Request behavior and diagnosing proxy failures
 
-Routes, arrivals, destination-stop arrivals, vehicles, and trip enrichment share
-one request handler. Vehicle XML is parsed separately, but transport selection,
-20-second timeouts, HTTP errors, and network errors follow the same rules.
+Routes, arrivals, destination-stop arrivals, and vehicles share one request
+handler with explicit response formats and 20-second timeouts. Routes use direct
+`/routeJSON/`; all arrivals use direct XML `/arrivals/`, normalized into arrival
+objects. Vehicle lookup uses XML `/vehicle/` through the configured proxy and
+shows setup guidance if none is configured. Proxy settings apply only to vehicles.
+The unsupported `/trip/` enrichment call has been removed; vehicle cards summarize
+the trip ID and route/headsign fields already in the vehicle response.
 Requests never silently switch between direct and proxy access or retry an
 authentication error. Destination geocoding uses Photon separately; its subsequent
 stop-arrival lookups use the common TheBus handler.
@@ -185,3 +189,16 @@ through the same unauthenticated corsproxy.io URL, with Origin set to
 `https://tkshaner.github.io`. It returned HTTP 401 and a message requiring a valid
 corsproxy.io API key. No TheBus credentials were used in this check. This reproduces
 a proxy authentication failure independently of TheBus endpoint behavior.
+
+
+## Direct arrivals and time handling
+
+The XML arrivals endpoint returned wildcard CORS permission in the authenticated
+[audit](docs/THEBUS_API_AUDIT.md), unlike its JSON counterpart. Stop lookup,
+destination search, map-stop links, and live timetable fallback all use XML arrivals.
+No public proxy is contacted by route or arrival searches, even if one is configured.
+
+Arrival date and clock fields are interpreted in Hawaii time (UTC-10) regardless
+of the rider's browser timezone. Scheduled/real-time flags are compared explicitly,
+so the string `"0"` is correctly shown as scheduled. Unknown dates do not produce
+invented countdowns. Full-date conversion handles midnight and noon.
