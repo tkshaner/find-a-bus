@@ -1134,3 +1134,9 @@ footer {
   border-color: var(--color-success);
   color: var(--color-text);
 }
+
+/* Give route geometry room to fit on both desktop and mobile screens. */
+#routeMapCanvas {
+  height: clamp(320px, 60vh, 640px);
+  height: clamp(320px, 60svh, 640px);
+}

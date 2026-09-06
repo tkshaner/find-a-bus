@@ -555,12 +555,39 @@ let routeStopMarkers = [];
 let currentRouteNum = null;
 let currentShapeId = null;
 let currentRouteView = 'map';
+let routeFitPending = false;
+let routeLayoutFrame = null;
+let routeMapSize = { width: 0, height: 0 };
+let routeMapResizeObserver = null;
+
+// Fit only after the visible canvas has its final layout dimensions.
+function scheduleRouteMapLayout() {
+  if (routeLayoutFrame !== null) cancelAnimationFrame(routeLayoutFrame);
+  routeLayoutFrame = requestAnimationFrame(() => {
+    routeLayoutFrame = null;
+    if (!routeMap || !routePolyline || !routeMapCanvas) return;
+    const { width, height } = routeMapCanvas.getBoundingClientRect();
+    if (!width || !height) return;
+    const resized = width !== routeMapSize.width || height !== routeMapSize.height;
+    routeMap.invalidateSize({ pan: false });
+    if (routeFitPending || resized) {
+      const bounds = routePolyline.getBounds();
+      if (bounds.isValid()) {
+        routeMap.fitBounds(bounds, { padding: [32, 32], maxZoom: 16, animate: false });
+        routeFitPending = false;
+      }
+    }
+    routeMapSize = { width, height };
+  });
+}
 
 // Initialize route map
 function initRouteMap() {
   if (!routeMap && routeMapCanvas) {
     // Center on Honolulu
     routeMap = L.map(routeMapCanvas).setView([21.3099, -157.8581], 12);
+    routeMapResizeObserver = new ResizeObserver(scheduleRouteMapLayout);
+    routeMapResizeObserver.observe(routeMapCanvas);
 
     // Add OpenStreetMap tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -672,7 +699,8 @@ async function drawRoutePath(routeId, shapeIdOverride = null) {
   }).addTo(routeMap);
 
   // Fit map to route bounds
-  routeMap.fitBounds(routePolyline.getBounds().pad(0.1));
+  routeFitPending = true;
+  scheduleRouteMapLayout();
 
   // Add route info popup at start of route
   const startPoint = coordinates[0];
@@ -762,11 +790,7 @@ async function addRouteStops(routeId, shapeIdOverride = null) {
 function showRouteMap() {
   if (routeMapContainer) {
     routeMapContainer.style.display = 'block';
-    setTimeout(() => {
-      if (routeMap) {
-        routeMap.invalidateSize();
-      }
-    }, 100);
+    scheduleRouteMapLayout();
   }
 }
 
@@ -1225,7 +1249,7 @@ function setRouteView(view) {
 
   // Leaflet needs a size recalculation when the map becomes visible again
   if (showMap && routeMap) {
-    setTimeout(() => routeMap.invalidateSize(), 100);
+    scheduleRouteMapLayout();
   }
 
   // Build the timetable the first time its tab is opened.
