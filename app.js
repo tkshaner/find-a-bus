@@ -1,24 +1,4 @@
 const apiBase = "https://api.thebus.org";
-const proxyConfigErrorMessage = "Request blocked by CORS. Add your proxy template in “Advanced API settings” (example: https://your-worker.workers.dev/?url={url}) and try again.";
-
-function shouldForceProxyRequests() {
-  if (typeof window === "undefined" || !window.location) {
-    return false;
-  }
-
-  const hostname = String(window.location.hostname || "").toLowerCase();
-
-  if (!hostname) {
-    return false;
-  }
-
-  if (hostname === "localhost" || hostname === "127.0.0.1") {
-    return false;
-  }
-
-  return hostname.endsWith("github.io") || hostname.endsWith("githubusercontent.com");
-}
-
 const themeToggle = document.getElementById("themeToggle");
 const themeStorageKey = "findabus-theme";
 const prefersDarkTheme = typeof window.matchMedia === "function"
@@ -2075,10 +2055,6 @@ function createProxyUrl(url) {
     .replaceAll("{url_raw}", url);
 }
 
-function getProxyHeaders() {
-  return {};
-}
-
 // Parse XML vehicle response and convert to JSON format
 function parseVehicleXML(xmlString) {
   const parser = new DOMParser();
@@ -2162,162 +2138,100 @@ async function enrichVehiclesWithTripDetails(vehicles) {
   }));
 }
 
-async function fetchJson(url, { useProxy = false } = {}) {
-  const headers = { Accept: "application/json" };
-  let targetUrl = url;
+// Each lookup uses exactly one transport. A configured proxy is explicit on
+// every host; authentication, HTTP and parsing errors never switch transport.
+const API_REQUEST_TIMEOUT_MS = 20000;
 
-  if (useProxy) {
-    targetUrl = createProxyUrl(url);
-    Object.assign(headers, getProxyHeaders());
+function apiRequestError(path, viaProxy, kind, status = null, publicProxy = false) {
+  const transport = viaProxy ? 'configured proxy' : 'TheBus API directly';
+  const prefix = `${path} via ${transport}`;
+  let detail;
+  if (kind === 'timeout') {
+    detail = 'The request timed out. Try again shortly.';
+  } else if (kind === 'network') {
+    detail = viaProxy
+      ? 'The browser could not reach or read the proxy response. Check proxy availability and CORS settings.'
+      : 'The browser could not reach or read TheBus response. This may be a network or CORS failure. Try a trusted proxy if direct access is blocked.';
+  } else if (status === 401) {
+    detail = viaProxy
+      ? 'Authentication was rejected by the proxy or TheBus upstream; this status alone does not identify which one.'
+      : 'TheBus rejected authentication. Check that your TheBus key is valid.';
+    if (publicProxy) detail += ' corsproxy.io requires its own API key and allowed production domain. TheBus credentials do not authenticate the proxy. Use an authenticated custom template or your own proxy.';
+  } else if (status === 403) {
+    detail = 'Access was denied. Check provider permissions and, if using a proxy, its domain and plan restrictions.';
+  } else if (status === 429) {
+    detail = 'The service is rate-limiting requests. Wait before retrying.';
+  } else if (kind === 'http') {
+    detail = 'The service returned an unsuccessful response. Try again shortly.';
+  } else if (kind === 'api') {
+    detail = 'The service reported an API error. Check your key and lookup parameters.';
+  } else {
+    detail = 'The service returned an unexpected response format instead of the expected transit data.';
   }
-
-  const response = await fetch(targetUrl, { headers });
-
-  if (!response.ok) {
-    const error = new Error(`Request failed (${response.status})`);
-    error.status = response.status;
-    throw error;
-  }
-
-  const body = await response.text();
-
-  if (!body) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(body);
-  } catch (parseError) {
-    parseError.name = "JsonParseError";
-    throw parseError;
-  }
-}
-
-function shouldRetryWithProxy(error) {
-  if (!error) {
-    return false;
-  }
-
-  if (error.name === "JsonParseError") {
-    return true;
-  }
-
-  if (typeof error.status === "number" && (error.status === 0 || error.status === 400 || error.status === 403)) {
-    return true;
-  }
-
-  if (typeof TypeError !== "undefined" && error instanceof TypeError) {
-    return true;
-  }
-
-  return false;
+  // Never include a request URL, key, or raw response body in diagnostics.
+  const error = new Error(`${prefix}${status ? ` (HTTP ${status})` : ''}: ${detail}`);
+  error.name = 'ApiRequestError';
+  error.status = status;
+  error.kind = kind;
+  error.endpoint = path;
+  error.transport = viaProxy ? 'proxy' : 'direct';
+  return error;
 }
 
 async function fetchFromApi(path, params = {}) {
   const apiKey = apiKeyInput.value.trim();
-
-  // Validate API key
   const validation = validateApiKey(apiKey);
-  if (!validation.valid) {
-    throw new Error(validation.message);
+  if (!validation.valid) throw new Error(validation.message);
+
+  const template = getProxyTemplate().trim();
+  const viaProxy = Boolean(template);
+  if (viaProxy && !isValidProxyTemplate(template)) {
+    throw new Error('Proxy template must include {url} or {url_raw}.');
   }
-
-  const forceProxyRequests = shouldForceProxyRequests();
-  const proxyTemplate = getProxyTemplate().trim();
-  const hasProxyTemplate = proxyTemplate.length > 0;
-  if (hasProxyTemplate && !isValidProxyTemplate(proxyTemplate)) {
-    throw new Error("Proxy template must include {url} or {url_raw}.");
-  }
-  const skipDirectFetchError = new Error("Skip direct fetch");
-  skipDirectFetchError.name = "SkipDirectFetchError";
-
-  const searchParams = new URLSearchParams({ key: apiKey });
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      searchParams.set(key, value);
-    }
-  });
-
+  const publicProxy = viaProxy && isPublicProxyEnabled();
+  const fail = (kind, status) => apiRequestError(path, viaProxy, kind, status, publicProxy);
   const url = new URL(path, apiBase);
-  url.search = searchParams.toString();
+  url.search = new URLSearchParams({ key: apiKey, ...Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  ) }).toString();
 
-  // Special handling for /vehicle endpoint which returns XML
-  const isVehicleEndpoint = path.includes("/vehicle");
-
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
   try {
-    if (isVehicleEndpoint) {
-      if (forceProxyRequests && hasProxyTemplate) {
-        throw skipDirectFetchError;
-      }
-      // Fetch XML for vehicle endpoint
-      const response = await fetch(url.toString());
-      if (!response.ok) {
-        throw new Error(`Request failed (${response.status})`);
-      }
-      const xmlText = await response.text();
-      return parseVehicleXML(xmlText);
-    } else {
-      if (forceProxyRequests && hasProxyTemplate) {
-        throw skipDirectFetchError;
-      }
-      // Fetch JSON for other endpoints
-      const data = await fetchJson(url.toString());
-      if (data.errorMessage) {
-        throw new Error(data.errorMessage);
-      }
-      return data;
-    }
-  } catch (error) {
-    // Retry with proxy for both XML and JSON endpoints on CORS/network errors
-    if (!isVehicleEndpoint && !forceProxyRequests && !shouldRetryWithProxy(error)) {
-      throw error;
-    }
-
-    if (!hasProxyTemplate) {
-      if (forceProxyRequests || shouldRetryWithProxy(error)) {
-        throw new Error(proxyConfigErrorMessage);
-      }
-      throw error;
-    }
-
-    // For vehicle endpoint, retry with configured proxy on any error (likely CORS)
-    if (isVehicleEndpoint) {
-      try {
-        const proxyUrl = createProxyUrl(url.toString());
-        const headers = {
-          "X-Requested-With": "find-a-bus",
-          ...getProxyHeaders()
-        };
-        const response = await fetch(proxyUrl, { headers });
-        if (!response.ok) {
-          throw new Error(`Request failed via proxy (${response.status})`);
-        }
-        const xmlText = await response.text();
-        return parseVehicleXML(xmlText);
-      } catch (proxyError) {
-        throw new Error("Unable to fetch vehicle data using the configured proxy.");
-      }
-    }
-
-    // Retry JSON endpoints with configured proxy
-    let lastProxyError = null;
+    // Accept is CORS-safelisted; do not add vehicle-only preflight headers.
+    const response = await fetch(viaProxy ? createProxyUrl(url.toString()) : url.toString(), {
+      headers: { Accept: path.includes('/vehicle') ? 'application/xml, text/xml' : 'application/json' },
+      signal: controller.signal
+    });
+    if (!response.ok) throw fail('http', response.status);
+    const body = await response.text();
+    if (!body.trim()) throw fail('format');
+    let data;
     try {
-      const data = await fetchJson(url.toString(), {
-        useProxy: true
-      });
-      if (data.errorMessage) {
-        throw new Error(data.errorMessage);
+      if (path.includes('/vehicle')) {
+        const xml = new DOMParser().parseFromString(body, 'text/xml');
+        if (xml.querySelector('parsererror') || xml.documentElement?.tagName.toLowerCase() === 'html') {
+          throw fail('format');
+        }
+        if (xml.querySelector('errorMessage, error')) throw fail('api');
+        // An empty vehicles collection is valid; an arbitrary XML document is not.
+        if (!xml.querySelector('vehicles, vehicle')) throw fail('format');
+        data = parseVehicleXML(body);
+      } else {
+        data = JSON.parse(body);
+        if (!data || typeof data !== 'object' || Array.isArray(data)) throw fail('format');
+        if (data.errorMessage || data.error) throw fail('api');
       }
-      return data;
-    } catch (proxyError) {
-      lastProxyError = proxyError;
+    } catch (error) {
+      if (error.name === 'ApiRequestError') throw error;
+      throw fail('format');
     }
-
-    if (lastProxyError?.name === "JsonParseError") {
-      throw new Error("Received an unexpected response from TheBus API.");
-    }
-
-    throw lastProxyError || error;
+    return data;
+  } catch (error) {
+    if (error.name === 'ApiRequestError') throw error;
+    throw fail(controller.signal.aborted ? 'timeout' : 'network');
+  } finally {
+    clearTimeout(timer);
   }
 }
 

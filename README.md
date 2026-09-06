@@ -15,7 +15,7 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 - Enter your TheBus API key in the banner at the top of the page.
 - If you do not yet have a key, request one for free from the [TheBus developer portal](https://www.honolulutransit.org/).
 - **Security:** By default, your key is stored in `sessionStorage` and cleared when you close your browser tab. Check "Remember my key" to store it permanently in `localStorage`.
-- **Optional proxy template:** If your deployment (such as GitHub Pages) hits CORS restrictions, provide your own proxy template URL in the UI, such as `https://your-proxy.example/?url={url}` or `https://your-worker.workers.dev/?url={url}`.
+- **Optional proxy template:** Leave blank for direct access. When configured, every TheBus request uses that proxy, on localhost and GitHub Pages alike. Provide your own proxy template URL in the UI, such as `https://your-proxy.example/?url={url}` or `https://your-worker.workers.dev/?url={url}`.
 - **Important:** Only use free developer API keys. Never enter production or paid API keys into this application.
 
 ### 3. Explore transit data
@@ -24,7 +24,7 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 - **Vehicles panel:** Enter a fleet number to see the vehicle's latest reported position and status.
 - **Arrivals panel:** Provide a stop number to view upcoming arrivals, including direction and schedule adherence.
 
-> **Tip:** If the browser blocks requests to `https://api.thebus.org` because of CORS, configure the optional proxy template with a server you control. The app does **not** use public third-party fallback proxies.
+> **Tip:** If the browser blocks requests to `https://api.thebus.org` because of CORS, configure the optional proxy template with a server you control. The public-proxy checkbox uses corsproxy.io without a separate proxy key. Its deployed-site access requires its own credentials and domain registration; use an authenticated custom template or a proxy you control.
 
 ## Deploying to GitHub Pages
 
@@ -154,3 +154,34 @@ Tests run on:
 - Mobile (Pixel 5, iPhone 12)
 
 For detailed testing documentation, see [TESTING.md](TESTING.md).
+
+
+## Request behavior and diagnosing proxy failures
+
+Routes, arrivals, destination-stop arrivals, vehicles, and trip enrichment share
+one request handler. Vehicle XML is parsed separately, but transport selection,
+20-second timeouts, HTTP errors, and network errors follow the same rules.
+Requests never silently switch between direct and proxy access or retry an
+authentication error. Destination geocoding uses Photon separately; its subsequent
+stop-arrival lookups use the common TheBus handler.
+
+Errors identify the endpoint path, direct/proxy transport, and HTTP status when
+available. They deliberately omit keys, full URLs, and raw response bodies.
+A proxied HTTP 401 alone cannot distinguish proxy authentication from upstream
+TheBus authentication. A network/CORS failure means the browser could not read a
+response; it does not prove that the key was rejected.
+
+The built-in public URL is `https://corsproxy.io/?url={url}`. It does not include
+a corsproxy.io key. TheBus's key is nested inside the encoded upstream URL and
+cannot authenticate corsproxy.io itself. For deployed access, see the provider's
+[authentication documentation](https://corsproxy.io/docs/get-api-key/) and
+[troubleshooting guide](https://corsproxy.io/docs/troubleshooting/).
+To use provider authentication, uncheck the public option and configure the
+provider's authenticated template, or use your own `fab-proxy` deployment.
+Custom templates remain browser-visible and are saved in localStorage.
+
+A credential-free diagnostic on 2026-09-06 requested public `https://example.com`
+through the same unauthenticated corsproxy.io URL, with Origin set to
+`https://tkshaner.github.io`. It returned HTTP 401 and a message requiring a valid
+corsproxy.io API key. No TheBus credentials were used in this check. This reproduces
+a proxy authentication failure independently of TheBus endpoint behavior.
