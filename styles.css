@@ -291,6 +291,102 @@ main {
   background: var(--color-surface-elevated);
 }
 
+.demo-invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary), var(--color-border-muted) 45%);
+  border-left: 4px solid var(--color-primary);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-primary), var(--color-surface) 90%);
+}
+
+.demo-invite__text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.demo-invite__text strong {
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+.demo-invite__text span {
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+}
+
+.demo-invite .btn {
+  white-space: nowrap;
+}
+
+.demo-banner[hidden] {
+  display: none;
+}
+
+.demo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent), var(--color-border-muted) 40%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-accent), var(--color-surface) 86%);
+}
+
+.demo-banner__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent), transparent 20%);
+  animation: demo-pulse 1.8s ease-out infinite;
+}
+
+.demo-banner__text {
+  flex: 1 1 240px;
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.92rem;
+}
+
+.demo-banner__text strong {
+  color: var(--color-accent);
+  font-weight: 800;
+}
+
+.demo-banner .btn {
+  white-space: nowrap;
+}
+
+@keyframes demo-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent), transparent 20%); }
+  70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-accent), transparent 100%); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent), transparent 100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-banner__dot { animation: none; }
+}
+
+/* Demo mode de-emphasizes the real key setup while keeping it reachable. */
+body[data-demo="on"] .security-notice,
+body[data-demo="on"] .setup-grid,
+body[data-demo="on"] .advanced-settings {
+  opacity: 0.55;
+}
+
+body[data-demo="on"] .demo-invite {
+  display: none;
+}
+
 .security-notice {
   padding: 0.85rem 1rem;
   border: 1px solid color-mix(in srgb, var(--color-secondary), var(--color-border-muted) 45%);

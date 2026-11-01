@@ -130,6 +130,188 @@ const usePublicProxyStorageKey = "thebus-use-public-proxy";
 const publicProxyTemplate = "https://corsproxy.io/?url={url}";
 const savedCommutesStorageKey = "findabus-saved-commutes";
 
+/* -------------------------------------------------------------------------
+ * Demo mode
+ *
+ * Lets anyone explore the app without a TheBus API key. When enabled, the
+ * shared request helpers (fetchFromApi, geocodeDestinationSearch) short-circuit
+ * and return built-in sample data instead of hitting the network. Route maps,
+ * stop tables, and timetables already run from bundled JSON, so only arrivals,
+ * vehicles, and destination geocoding need to be faked for a complete tour.
+ * The flag lives in sessionStorage so a demo never silently sticks around.
+ * ---------------------------------------------------------------------- */
+const demoModeStorageKey = "findabus-demo-mode";
+
+function isDemoMode() {
+  try {
+    return window.sessionStorage.getItem(demoModeStorageKey) === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function setDemoModeFlag(enabled) {
+  try {
+    const storage = window.sessionStorage;
+    if (enabled) storage.setItem(demoModeStorageKey, "1");
+    else storage.removeItem(demoModeStorageKey);
+  } catch (error) {
+    // Ignore storage failures (private mode, etc.); the UI still reflects state.
+  }
+}
+
+// Build a Hawaii (UTC-10, no DST) date + 12-hour clock a few minutes out, using
+// plain ASCII spacing so parseArrivalWaitMinutes' regex matches reliably.
+function demoHawaiiClock(minutesFromNow) {
+  const when = new Date(Date.now() + minutesFromNow * 60000);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Pacific/Honolulu",
+    hour12: false,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).formatToParts(when);
+  const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
+  const hour24 = Number(get("hour")) % 24;
+  const minute = get("minute");
+  const period = hour24 >= 12 ? "PM" : "AM";
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  return {
+    date: `${Number(get("month"))}/${Number(get("day"))}/${get("year")}`,
+    stopTime: `${hour12}:${minute} ${period}`
+  };
+}
+
+// Route search in demo mode works for any route bundled in the local data: the
+// variant selector, map, and tables already read that data, so we derive the
+// "route" response (variant cards + count) from it to stay perfectly in sync.
+async function demoRouteResponse(routeNum) {
+  const stopsData = await loadRouteStopsData();
+  const routeData = stopsData?.[routeNum];
+  if (!routeData || !routeData.shapes) return { route: [] };
+  const route = Object.entries(routeData.shapes)
+    .filter(([, stops]) => Array.isArray(stops) && stops.length > 0)
+    .map(([shapeID, stops]) => ({
+      routeNum: String(routeNum),
+      headsign: (stops[stops.length - 1]?.name || "").toUpperCase(),
+      firstStop: stops[0]?.name || "",
+      shapeID
+    }));
+  return { route };
+}
+
+function demoArrivalsResponse(stopId) {
+  const samples = [
+    { route: "2", headsign: "WAIKIKI KAPAHULU", direction: "Eastbound", vehicle: "249", minutes: 3, estimated: "1", canceled: "0" },
+    { route: "13", headsign: "UH MANOA", direction: "Eastbound", vehicle: "171", minutes: 9, estimated: "1", canceled: "0" },
+    { route: "2", headsign: "SCHOOL ST MIDDLE ST", direction: "Westbound", vehicle: "305", minutes: 16, estimated: "0", canceled: "0" },
+    { route: "A", headsign: "CITY EXPRESS KALIHI", direction: "Westbound", vehicle: "412", minutes: 24, estimated: "1", canceled: "-1" }
+  ];
+  return {
+    stop: String(stopId ?? ""),
+    timestamp: demoHawaiiClock(0).stopTime,
+    arrivals: samples.map((sample, index) => {
+      const clock = demoHawaiiClock(sample.minutes);
+      return {
+        id: String(1000 + index),
+        trip: String(5500000 + index),
+        route: sample.route,
+        headsign: sample.headsign,
+        vehicle: sample.vehicle,
+        direction: sample.direction,
+        stopTime: clock.stopTime,
+        date: clock.date,
+        estimated: sample.estimated,
+        canceled: sample.canceled
+      };
+    })
+  };
+}
+
+function demoVehicleResponse(num) {
+  const fleet = String(num || "249").trim() || "249";
+  return {
+    timestamp: demoHawaiiClock(0).stopTime,
+    vehicles: [
+      {
+        vehicle: {
+          number: fleet,
+          route_short_name: "2",
+          headsign: "WAIKIKI KAPAHULU",
+          direction: "Eastbound",
+          adherence: "120",
+          last_message: demoHawaiiClock(-1).stopTime,
+          driver: "1042",
+          trip: "5500001",
+          latitude: "21.329072",
+          longitude: "-157.864236"
+        }
+      }
+    ]
+  };
+}
+
+// Fixed destination so "Find Stops Near Destination" works offline; the nearby
+// stop search then runs against the bundled stops.json just like the live app.
+function demoDestination(query) {
+  return {
+    lat: 21.2911,
+    lon: -157.8436,
+    label: (query && query.trim()) || "Ala Moana Center"
+  };
+}
+
+function demoResponseFor(path, params = {}) {
+  switch (path) {
+    case "/routeJSON/":
+      return demoRouteResponse(params.route);
+    case "/arrivals/":
+      return Promise.resolve(demoArrivalsResponse(params.stop));
+    case "/vehicle/":
+      return Promise.resolve(demoVehicleResponse(params.num));
+    default:
+      return Promise.resolve({});
+  }
+}
+
+function syncDemoUi() {
+  const active = isDemoMode();
+  document.body.setAttribute("data-demo", active ? "on" : "off");
+  const banner = document.getElementById("demoBanner");
+  if (banner) banner.hidden = !active;
+}
+
+function enterDemoMode() {
+  setDemoModeFlag(true);
+  syncDemoUi();
+
+  // Prefill the lookups with sample inputs so the tour is one click per panel.
+  const prefill = (id, value) => {
+    const field = document.getElementById(id);
+    if (field && !field.value.trim()) field.value = value;
+  };
+  prefill("routeNumber", "2");
+  prefill("stopNumber", "45");
+  prefill("vehicleNumber", "249");
+  prefill("destinationSearch", "Ala Moana Center");
+
+  // Kick off the route search immediately for instant payoff.
+  document.getElementById("routeForm")?.requestSubmit();
+  document.getElementById("routes-title")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function exitDemoMode() {
+  setDemoModeFlag(false);
+  syncDemoUi();
+  document.getElementById("setup-title")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+document.getElementById("enterDemoBtn")?.addEventListener("click", enterDemoMode);
+document.getElementById("exitDemoBtn")?.addEventListener("click", exitDemoMode);
+syncDemoUi();
+
 
 function getSavedCommutes() {
   try {
@@ -1755,6 +1937,8 @@ function parseDestinationCoordinates(query) {
 }
 
 async function geocodeDestinationSearch(query) {
+  if (isDemoMode()) return demoDestination(query);
+
   const coordinateDestination = parseDestinationCoordinates(query);
   if (coordinateDestination) return coordinateDestination;
 
@@ -2173,6 +2357,8 @@ function apiRequestError(path, viaProxy, kind, status = null, publicProxy = fals
 }
 
 async function fetchFromApi(path, params = {}) {
+  if (isDemoMode()) return demoResponseFor(path, params);
+
   const apiKey = apiKeyInput.value.trim();
   const validation = validateApiKey(apiKey);
   if (!validation.valid) throw new Error(validation.message);

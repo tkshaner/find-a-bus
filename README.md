@@ -10,7 +10,18 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 
 - Open `index.html` in any modern browser. No build steps are required because the site is fully static.
 
-### 2. Add your API key
+### 2. (Optional) Try the demo first
+
+- Don't have a key yet? Click **▶ Try the demo** in the "Connect TheBus API" panel.
+- Demo mode fills every lookup with realistic sample data — Routes, Arrivals,
+  Vehicles, and Find Stops Near Destination all work end-to-end with **no API
+  key and no network calls to TheBus**. Route maps, stop tables, and timetables
+  run from the data bundled with the site, so every local route is explorable.
+- A banner marks that the results are sample data. Click **Exit demo** to return
+  to live mode. The setting is stored in `sessionStorage`, so it clears when you
+  close the tab.
+
+### 3. Add your API key
 
 - Enter your TheBus API key in the banner at the top of the page.
 - If you do not yet have a key, request one for free from the [TheBus developer portal](https://www.honolulutransit.org/).
@@ -18,7 +29,7 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 - **Optional proxy template:** Routes and arrivals connect directly. Vehicle lookup requires a configured proxy, on localhost and GitHub Pages alike. Provide your own proxy template URL in the UI, such as `https://your-proxy.example/?url={url}` or `https://your-worker.workers.dev/?url={url}`.
 - **Important:** Only use free developer API keys. Never enter production or paid API keys into this application.
 
-### 3. Explore transit data
+### 4. Explore transit data
 
 - **Routes panel:** Type a route number and optionally add a headsign keyword to narrow the results. Switch between the Map, Stops Table, and Timetable views for the selected route variant.
 - **Vehicles panel:** Enter a fleet number to see the vehicle's latest reported position and status.
@@ -144,6 +155,7 @@ npm run test:report
 - ✅ **Stops Map** (13 tests): 3,831 stops, clustering, geolocation
 - ✅ **Arrivals** (8 tests): Form validation, results display
 - ✅ **Page Structure** (19 tests): Layout, responsive design, accessibility
+- ✅ **Demo Mode** (5 tests): Enable/exit, prefilled lookups, sample arrivals and vehicles without a key
 
 ### Browser Coverage
 
