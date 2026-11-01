@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Demo Mode**: Explore the entire app with realistic sample data — no TheBus
+  API key, sign-up, or network access required
+  - A "Try the demo" button in the Connect panel enables demo mode (stored in
+    `sessionStorage`, so it never silently persists past the tab) and prefills
+    each lookup with sample inputs
+  - While active, the shared request helpers (`fetchFromApi`,
+    `geocodeDestinationSearch`) short-circuit and return built-in sample
+    responses, so Routes, Arrivals, Vehicles, and Find Stops Near Destination
+    all render end-to-end. Route maps, stop tables, and timetables already run
+    from bundled JSON and work for every local route
+  - Arrival and vehicle sample times are generated in Hawaii time so countdowns
+    and schedule-adherence read correctly
+  - A persistent banner marks that results are sample data, with an "Exit demo"
+    control that restores normal key-required behavior
+
 ### Changed
 - **Per-Stop Planned Timetable**: The static Timetable tab now shows scheduled
   times at *any* stop along the route, not just the trip origin

@@ -76,6 +76,14 @@
     </header>
 
     <main>
+      <div id="demoBanner" class="demo-banner" role="status" hidden>
+        <span class="demo-banner__dot" aria-hidden="true"></span>
+        <p class="demo-banner__text">
+          <strong>Demo mode is on.</strong> Every result below is built-in sample data — nothing is fetched from TheBus and no API key is used.
+        </p>
+        <button type="button" id="exitDemoBtn" class="btn btn-secondary">Exit demo</button>
+      </div>
+
       <section class="panel setup-panel" aria-labelledby="setup-title">
         <div class="panel__header">
           <div class="section-kicker">Step 1</div>
@@ -83,6 +91,14 @@
           <p>Add your key once, then use any lookup below without leaving the page.</p>
         </div>
         <div class="api-key-container">
+          <div class="demo-invite" id="demoInvite">
+            <div class="demo-invite__text">
+              <strong>No API key yet?</strong>
+              <span>Take a full tour with realistic sample data — no key, sign-up, or network needed.</span>
+            </div>
+            <button type="button" id="enterDemoBtn" class="btn">▶ Try the demo</button>
+          </div>
+
           <div class="security-notice" role="alert">
             <strong>Security Notice:</strong> Your API key is stored in your browser. By default, it's cleared when you close the tab.
             Never use production or paid API keys with this tool.
