@@ -52,6 +52,17 @@ function applyTheme(theme) {
 
 applyTheme(resolveTheme());
 
+// Read a theme color token so Leaflet vector layers (which take literal
+// colors, not CSS variables) match the active theme.
+function cssVar(name, fallback) {
+  try {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
 if (themeToggle) {
   themeToggle.addEventListener("click", () => {
     const newTheme = resolveTheme() === "dark" ? "light" : "dark";
@@ -834,16 +845,7 @@ async function drawRoutePath(routeId, shapeIdOverride = null) {
   L.marker(startPoint, {
     icon: L.divIcon({
       className: 'route-start-marker',
-      html: `<div style="
-        background: ${color};
-        color: white;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-weight: bold;
-        font-size: 14px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        white-space: nowrap;
-      ">Route ${routeData.name}</div>`,
+      html: `<div class="map-marker-label" style="border-left: 4px solid ${color};">Route ${routeData.name}</div>`,
       iconSize: [60, 24],
       iconAnchor: [30, 12]
     })
@@ -882,8 +884,8 @@ async function addRouteStops(routeId, shapeIdOverride = null) {
 
     const marker = L.circleMarker([stop.lat, stop.lon], {
       radius: 6,
-      fillColor: isFirst ? '#10b981' : isLast ? '#ef4444' : '#ffffff',
-      color: '#2563eb',
+      fillColor: isFirst ? cssVar('--color-success', '#10b981') : isLast ? cssVar('--color-danger', '#ef4444') : cssVar('--color-surface', '#ffffff'),
+      color: cssVar('--color-primary', '#2563eb'),
       weight: 2,
       opacity: 1,
       fillOpacity: 0.9
@@ -896,11 +898,11 @@ async function addRouteStops(routeId, shapeIdOverride = null) {
         <dl style="margin: 0; display: grid; gap: 4px; font-size: 0.85em;">
           <div><dt style="font-weight: 600;">Stop Code:</dt><dd style="margin: 0;">${stop.code || stop.id}</dd></div>
           <div><dt style="font-weight: 600;">Sequence:</dt><dd style="margin: 0;">#${stop.sequence} of ${stops.length}</dd></div>
-          ${isFirst ? '<div style="color: #10b981; font-weight: 600; margin-top: 4px;">First Stop</div>' : ''}
-          ${isLast ? '<div style="color: #ef4444; font-weight: 600; margin-top: 4px;">Last Stop</div>' : ''}
+          ${isFirst ? '<div style="color: var(--color-success); font-weight: 600; margin-top: 4px;">First Stop</div>' : ''}
+          ${isLast ? '<div style="color: var(--color-danger); font-weight: 600; margin-top: 4px;">Last Stop</div>' : ''}
         </dl>
         <button onclick="checkStopArrivals('${stop.code || stop.id}')"
-                style="width: 100%; margin-top: 8px; padding: 6px 12px; background: var(--color-primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                style="width: 100%; margin-top: 8px; padding: 6px 12px; background: var(--color-primary); color: var(--color-text-inverse); border: none; border-radius: 0; cursor: pointer; font-weight: 600;">
           Check Arrivals
         </button>
       </div>
@@ -1439,20 +1441,7 @@ function addVehicleMarker(vehicle) {
   // Create custom icon based on route
   const busIcon = L.divIcon({
     className: 'custom-bus-icon',
-    html: `<div style="
-      background: linear-gradient(135deg, #2563eb, #3b82f6);
-      color: white;
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 14px;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-      border: 3px solid white;
-    ">🚌</div>`,
+    html: `<div class="map-marker-bus"><span>🚌</span></div>`,
     iconSize: [36, 36],
     iconAnchor: [18, 18],
     popupAnchor: [0, -18]
@@ -1573,14 +1562,7 @@ function addStopsToMap(stops) {
     // Create custom stop icon
     const stopIcon = L.divIcon({
       className: 'custom-stop-icon',
-      html: `<div style="
-        background: white;
-        border: 2px solid #2563eb;
-        border-radius: 50%;
-        width: 12px;
-        height: 12px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      "></div>`,
+      html: `<div class="map-marker-stop"></div>`,
       iconSize: [12, 12],
       iconAnchor: [6, 6],
       popupAnchor: [0, -6]
@@ -1600,10 +1582,10 @@ function addStopsToMap(stops) {
           style="
             width: 100%;
             padding: 8px 12px;
-            background: linear-gradient(135deg, #2563eb, #3b82f6);
-            color: white;
+            background: var(--color-primary);
+            color: var(--color-text-inverse);
             border: none;
-            border-radius: 8px;
+            border-radius: 0;
             font-weight: 600;
             cursor: pointer;
             font-size: 0.9em;
@@ -1629,12 +1611,12 @@ function showStopsMessage(message, isError = false) {
     stopsMessage.textContent = message;
     stopsMessage.style.display = 'block';
     if (isError) {
-      stopsMessage.style.background = 'rgba(220, 38, 38, 0.1)';
-      stopsMessage.style.borderColor = 'rgba(220, 38, 38, 0.3)';
-      stopsMessage.style.color = '#991b1b';
+      stopsMessage.style.background = 'color-mix(in srgb, var(--color-danger), var(--color-surface) 88%)';
+      stopsMessage.style.borderColor = 'var(--color-danger)';
+      stopsMessage.style.color = 'var(--color-text)';
     } else {
-      stopsMessage.style.background = 'rgba(59, 130, 246, 0.1)';
-      stopsMessage.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+      stopsMessage.style.background = '';
+      stopsMessage.style.borderColor = '';
       stopsMessage.style.color = 'var(--color-text)';
     }
   }
@@ -1753,14 +1735,7 @@ async function findNearbyStops() {
       if (stopsMap) {
         const userIcon = L.divIcon({
           className: 'user-location-icon',
-          html: `<div style="
-            background: #ef4444;
-            border: 3px solid white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-          "></div>`,
+          html: `<div class="map-marker-user"></div>`,
           iconSize: [20, 20],
           iconAnchor: [10, 10]
         });
