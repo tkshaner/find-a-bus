@@ -26,7 +26,7 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 - Enter your TheBus API key in the banner at the top of the page.
 - If you do not yet have a key, request one for free from the [TheBus developer portal](https://www.honolulutransit.org/).
 - **Security:** By default, your key is stored in `sessionStorage` and cleared when you close your browser tab. Check "Remember my key" to store it permanently in `localStorage`.
-- **Optional proxy template:** Routes and arrivals connect directly. Vehicle lookup requires a configured proxy, on localhost and GitHub Pages alike. Provide your own proxy template URL in the UI, such as `https://your-proxy.example/?url={url}` or `https://your-worker.workers.dev/?url={url}`.
+- **Optional proxy template:** Routes and arrivals connect directly. Vehicle lookup requires a configured proxy, on localhost and GitHub Pages alike. Deploy the bundled [`fab-proxy`](proxy/README.md) worker and enter its URL in the UI, such as `https://fab-proxy.your-account.workers.dev/?url={url}`.
 - **Important:** Only use free developer API keys. Never enter production or paid API keys into this application.
 
 ### 4. Explore transit data
@@ -35,7 +35,7 @@ An interactive single-page site for exploring Honolulu's TheBus routes, vehicles
 - **Vehicles panel:** Enter a fleet number to see the vehicle's latest reported position and status.
 - **Arrivals panel:** Provide a stop number to view upcoming arrivals, including direction and schedule adherence.
 
-> **Tip:** If the browser blocks requests to `https://api.thebus.org` because of CORS, configure the optional proxy template with a server you control. The public-proxy checkbox uses corsproxy.io without a separate proxy key. Its deployed-site access requires its own credentials and domain registration; use an authenticated custom template or a proxy you control.
+> **Tip:** TheBus serves vehicle data without CORS headers, so vehicle lookup needs a proxy you control. Deploy the bundled Cloudflare Worker in [`proxy/`](proxy/README.md) and enter its URL as the proxy template. The former corsproxy.io checkbox was removed because that service now requires its own API key and a registered domain.
 
 ## Deploying to GitHub Pages
 
@@ -187,20 +187,20 @@ A proxied HTTP 401 alone cannot distinguish proxy authentication from upstream
 TheBus authentication. A network/CORS failure means the browser could not read a
 response; it does not prove that the key was rejected.
 
-The built-in public URL is `https://corsproxy.io/?url={url}`. It does not include
-a corsproxy.io key. TheBus's key is nested inside the encoded upstream URL and
-cannot authenticate corsproxy.io itself. For deployed access, see the provider's
-[authentication documentation](https://corsproxy.io/docs/get-api-key/) and
-[troubleshooting guide](https://corsproxy.io/docs/troubleshooting/).
-To use provider authentication, uncheck the public option and configure the
-provider's authenticated template, or use your own `fab-proxy` deployment.
-Custom templates remain browser-visible and are saved in localStorage.
+The app no longer offers a built-in public proxy. corsproxy.io now requires its
+own API key and a registered production domain; TheBus's key, nested inside the
+encoded upstream URL, cannot authenticate it, so every deployed request returned
+HTTP 401. Any saved "use public proxy" setting is cleared on load.
+
+Use the bundled [`fab-proxy`](proxy/README.md) Cloudflare Worker instead. It
+forwards only TheBus `/vehicle/` lookups, only for origins listed in its
+`ALLOWED_ORIGINS`, and returns HTTP 403 for any other origin. Custom templates
+remain browser-visible and are saved in localStorage.
 
 A credential-free diagnostic on 2026-09-06 requested public `https://example.com`
-through the same unauthenticated corsproxy.io URL, with Origin set to
+through the unauthenticated corsproxy.io URL, with Origin set to
 `https://tkshaner.github.io`. It returned HTTP 401 and a message requiring a valid
-corsproxy.io API key. No TheBus credentials were used in this check. This reproduces
-a proxy authentication failure independently of TheBus endpoint behavior.
+corsproxy.io API key. No TheBus credentials were used in this check.
 
 
 ## Direct arrivals and time handling

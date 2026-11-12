@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     and schedule-adherence read correctly
   - A persistent banner marks that results are sample data, with an "Exit demo"
     control that restores normal key-required behavior
+- **fab-proxy worker** (`proxy/`): a Cloudflare Worker for vehicle lookup that
+  forwards only TheBus `/vehicle/` requests, only for origins in
+  `ALLOWED_ORIGINS`, and adds the CORS headers TheBus omits
+
+### Removed
+- **Public CORS proxy option**: corsproxy.io now requires its own API key and a
+  registered domain, so the checkbox only produced HTTP 401 errors on the
+  deployed site. Any saved setting is cleared on load; vehicle lookup without a
+  proxy now points to the fab-proxy setup guide
 
 ### Changed
 - **Per-Stop Planned Timetable**: The static Timetable tab now shows scheduled

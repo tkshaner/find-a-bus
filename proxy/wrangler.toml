@@ -1,0 +1,7 @@
+name = "fab-proxy"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+# Comma-separated page origins allowed to use this proxy (no trailing slash).
+ALLOWED_ORIGINS = "https://tkshaner.github.io,http://localhost:8000,http://127.0.0.1:8000"

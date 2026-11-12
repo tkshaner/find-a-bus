@@ -23,7 +23,7 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=direct-arrivals-1" />
+    <link rel="stylesheet" href="styles.css?v=fab-proxy-1" />
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -120,19 +120,11 @@
               <small id="key-help" class="help-text">Your key is stored temporarily in this browser session</small>
             </label>
 
-            <div class="setup-options" aria-label="API storage and proxy options">
+            <div class="setup-options" aria-label="API key storage options">
               <label class="checkbox-group">
                 <input type="checkbox" id="rememberKey" />
                 <span>Remember my key</span>
               </label>
-
-              <label class="checkbox-group">
-                <input type="checkbox" id="usePublicProxy" />
-                <span>Use public CORS proxy for vehicles</span>
-              </label>
-              <small id="public-proxy-help" class="help-text">
-                Routes vehicle requests through <strong>corsproxy.io</strong>. Deployed sites require a separate corsproxy.io key and registered domain. For authenticated access, uncheck this option and use a custom proxy template.
-              </small>
             </div>
           </div>
 
@@ -144,13 +136,13 @@
                 id="proxyTemplate"
                 type="text"
                 autocomplete="off"
-                placeholder="https://your-proxy.example/?url={url}"
+                placeholder="https://fab-proxy.your-account.workers.dev/?url={url}"
                 aria-describedby="proxy-help"
               />
             </label>
             <small id="proxy-help" class="help-text">
-              Routes and arrivals connect directly to TheBus. Vehicle lookup requires a trusted proxy, on both localhost and the deployed site. Include {url} (encoded) or {url_raw}. Example:
-              https://your-worker.workers.dev/?url={url}
+              Routes and arrivals connect directly to TheBus. Vehicle lookup requires a proxy you trust, because TheBus serves vehicle data without CORS headers. Deploy the bundled <code>fab-proxy</code> worker (proxy/README.md) and enter its URL here. Include {url} (encoded) or {url_raw}. Example:
+              https://fab-proxy.your-account.workers.dev/?url={url}
             </small>
           </details>
         </div>
@@ -348,6 +340,6 @@
       </article>
     </div>
 
-    <script src="app.js?v=direct-arrivals-1" type="module"></script>
+    <script src="app.js?v=fab-proxy-1" type="module"></script>
   </body>
 </html>
