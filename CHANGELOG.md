@@ -8,21 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **"Neon Transit" rain-city noir theme**: replaced the rounded, app-style
-  island palette with a moody, cinematic sci-fi look
-  - Dark mode ("Night Rain"): blue-black smog lit by sodium-amber light and
-    pink neon, with animated rain, film grain, and faint scanlines
-  - Light mode ("Dust"): orange smog haze over sepia paper with burnt-amber
-    and ink accents
-  - Header shows a city skyline silhouette with lit windows against a glowing
-    horizon, a flickering vertical katakana "bus stop" neon sign, and a wide,
-    letter-spaced title
-  - Michroma display type, Saira body text, and Share Tech Mono for labels,
-    times, and readouts; route numbers render as illuminated signs
-  - Hairline smoked-glass panels with a lit top edge and indicator lamp
-  - Map tiles are recolored to match the theme, and bus, stop, cluster, and
-    location markers use theme tokens instead of hard-coded blue
-  - Rain, flicker, and blink animations stop under `prefers-reduced-motion`
+- **"Net Dive" cyberbrain interface theme**: replaced the rain-city noir look
+  with a telemetry-style HUD
+  - Dark mode ("Dive"): deep teal-black with phosphor-green readouts and orange
+    warnings, a honeycomb grid, and falling green data streams along the page
+    edges
+  - Light mode ("Optic"): pale aqua-grey glass with dark teal ink and the same
+    accents
+  - Header shows a rotating targeting reticle with a pulsing lock box, a
+    vertical kanji "transit network" label, and a measurement ruler edge
+  - Oxanium display type, Exo 2 body text, and IBM Plex Mono for labels, times,
+    and readouts
+  - Panels have corner brackets and numbered `NODE.xx` readouts; route numbers
+    are hexagonal tags; buttons sweep a scan highlight on hover
+  - Map tiles are recolored teal-green, with hexagonal clusters, diamond stop
+    markers, and a crosshair lock-on bus marker
+  - Data-stream, reticle, and blink animations stop under
+    `prefers-reduced-motion`
 
 ### Added
 - **Demo Mode**: Explore the entire app with realistic sample data — no TheBus

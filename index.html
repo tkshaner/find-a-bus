@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#e9c99a" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#05080c" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#e9f1ee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#010707" media="(prefers-color-scheme: dark)" />
     <title>Find A Bus</title>
     <link rel="icon" type="image/svg+xml" href="bus-icon.svg" />
     <script>
@@ -23,7 +23,7 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=noir-1" />
+    <link rel="stylesheet" href="styles.css?v=dive-1" />
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -40,8 +40,25 @@
   </head>
   <body>
     <header class="hero">
+      <svg class="hero__reticle" aria-hidden="true" viewBox="0 0 200 200" fill="none" stroke="currentColor">
+        <circle cx="100" cy="100" r="97" stroke-width="0.6" opacity="0.35"/>
+        <g class="reticle-spin">
+          <circle cx="100" cy="100" r="89" stroke-width="1" stroke-dasharray="1.5 5" opacity="0.8"/>
+          <circle cx="100" cy="100" r="80" stroke-width="2.5" stroke-dasharray="70 55.66"/>
+        </g>
+        <g class="reticle-spin reticle-spin--rev">
+          <circle cx="100" cy="100" r="64" stroke-width="0.8" stroke-dasharray="3 3" opacity="0.7"/>
+          <path d="M100 30V40M100 160V170M30 100H40M160 100H170" stroke-width="1.5"/>
+          <path d="M150 50L144 56M50 150L56 144" stroke-width="1" opacity="0.6"/>
+        </g>
+        <path d="M100 6V54M100 146V194M6 100H54M146 100H194" stroke-width="0.6" opacity="0.55"/>
+        <g class="reticle-lock">
+          <path d="M80 88V80H88M112 80H120V88M120 112V120H112M88 120H80V112" stroke="currentColor" stroke-width="1.6"/>
+        </g>
+        <circle cx="100" cy="100" r="2" fill="currentColor" stroke="none"/>
+      </svg>
       <div class="hero__toolbar">
-        <p class="hero__status" aria-hidden="true">Oahu transit net · signal nominal</p>
+        <p class="hero__status" aria-hidden="true">Net link established · Oahu transit grid</p>
         <button type="button" id="themeToggle" class="theme-toggle" aria-pressed="false">
           <span class="theme-toggle__icon" data-theme-icon aria-hidden="true">🌙</span>
           <span class="theme-toggle__label" data-theme-label>Switch to dark mode</span>
@@ -49,7 +66,7 @@
       </div>
       <div class="hero__content">
         <p class="hero__eyebrow">Find A Bus · Honolulu</p>
-        <p class="hero__sign" aria-hidden="true">バス停</p>
+        <p class="hero__label-jp" aria-hidden="true">交通網</p>
         <h1>
           <svg class="hero__bus-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
             <rect x="4" y="12" width="56" height="30" rx="6" fill="currentColor" stroke="var(--color-border)" stroke-width="3" stroke-linejoin="round"/>
@@ -343,6 +360,6 @@
       </article>
     </div>
 
-    <script src="app.js?v=noir-1" type="module"></script>
+    <script src="app.js?v=dive-1" type="module"></script>
   </body>
 </html>
