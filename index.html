@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#e9f1ee" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#010707" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#e7e4d0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#030805" media="(prefers-color-scheme: dark)" />
     <title>Find A Bus</title>
     <link rel="icon" type="image/svg+xml" href="bus-icon.svg" />
     <script>
@@ -23,7 +23,7 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=dive-1" />
+    <link rel="stylesheet" href="styles.css?v=dive-2" />
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -39,6 +39,9 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   </head>
   <body>
+    <p class="ops-banner">Open data // Public transit // Oahu, HI</p>
+    <p class="edge-readout edge-readout--left" aria-hidden="true">Lat 21.3069 N · Lon 157.8583 W · <span>Grid 04Q</span></p>
+    <p class="edge-readout edge-readout--right" aria-hidden="true">Sys.transit · <span>3,831 stops indexed</span> · Net link OK</p>
     <header class="hero">
       <svg class="hero__reticle" aria-hidden="true" viewBox="0 0 200 200" fill="none" stroke="currentColor">
         <circle cx="100" cy="100" r="97" stroke-width="0.6" opacity="0.35"/>
@@ -80,7 +83,7 @@
             <circle cx="46" cy="46" r="7" fill="var(--color-border)"/>
             <circle cx="46" cy="46" r="3" fill="var(--color-text-muted)"/>
           </svg>
-          TheBus Route & Vehicle Explorer
+          <span class="hero__title">TheBus Route & Vehicle Explorer</span>
         </h1>
         <p>
           Plan the next move across Oahu: find a route, check a stop, track a vehicle, or explore nearby stops using
@@ -360,6 +363,6 @@
       </article>
     </div>
 
-    <script src="app.js?v=dive-1" type="module"></script>
+    <script src="app.js?v=dive-2" type="module"></script>
   </body>
 </html>

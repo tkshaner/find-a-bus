@@ -8,23 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **"Net Dive" cyberbrain interface theme**: replaced the rain-city noir look
-  with a telemetry-style HUD
-  - Dark mode ("Dive"): deep teal-black with phosphor-green readouts and orange
-    warnings, a honeycomb grid, and falling green data streams along the page
-    edges
-  - Light mode ("Optic"): pale aqua-grey glass with dark teal ink and the same
-    accents
-  - Header shows a rotating targeting reticle with a pulsing lock box, a
-    vertical kanji "transit network" label, and a measurement ruler edge
-  - Oxanium display type, Exo 2 body text, and IBM Plex Mono for labels, times,
-    and readouts
-  - Panels have corner brackets and numbered `NODE.xx` readouts; route numbers
-    are hexagonal tags; buttons sweep a scan highlight on hover
-  - Map tiles are recolored teal-green, with hexagonal clusters, diamond stop
+- **"Net Dive" tactical terminal theme**: replaced the rain-city noir look
+  with a military-style terminal HUD
+  - Dark mode ("Dive"): olive-black CRT with phosphor-green readouts and amber
+    alerts over a tactical plotting grid with crosshair markers
+  - Light mode ("Field"): khaki field-manual paper with olive ink and
+    amber-brown alerts
+  - A full-width "Open data // Public transit" banner strip, static
+    coordinate readouts in the page gutters on wide screens, and a header with
+    a rotating targeting reticle, a vertical kanji "transit network" label,
+    a blinking cursor, and a measurement ruler edge
+  - Panels open with a terminal title bar (`NODE.xx // LINK OK`) and corner
+    brackets; buttons read as bracketed `[ COMMANDS ]`; empty states show a
+    prompt and cursor; route numbers are hexagonal tags
+  - Oxanium for the title, IBM Plex Mono for headings, labels, and readouts,
+    and Exo 2 for body text
+  - Map tiles are recolored green, with hexagonal clusters, diamond stop
     markers, and a crosshair lock-on bus marker
-  - Data-stream, reticle, and blink animations stop under
-    `prefers-reduced-motion`
+  - Reticle, cursor, and blink animations stop under `prefers-reduced-motion`
 
 ### Added
 - **Demo Mode**: Explore the entire app with realistic sample data — no TheBus
