@@ -8,19 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Cyberpunk "Neon Transit" theme**: replaced the rounded, app-style island
-  palette with a hard-edged HUD look
-  - Dark mode ("Night City"): near-black city grid with neon cyan, hot magenta,
-    and signal-yellow accents, neon glows, and CRT scanlines
-  - Light mode ("Daylight HUD"): bone-white paper with black ink and the same
-    magenta/teal/yellow accents
-  - Chakra Petch display type with JetBrains Mono for labels, times, and data
-  - Square panels with HUD corner brackets, chamfered buttons and route tags,
-    numbered nav, `//` section kickers, hazard-striped warnings, and a
-    perspective-grid header
-  - Map tiles are recolored to match the theme (inverted in dark mode), and
-    bus, stop, cluster, and location markers use theme tokens instead of
-    hard-coded blue
+- **"Neon Transit" rain-city noir theme**: replaced the rounded, app-style
+  island palette with a moody, cinematic sci-fi look
+  - Dark mode ("Night Rain"): blue-black smog lit by sodium-amber light and
+    pink neon, with animated rain, film grain, and faint scanlines
+  - Light mode ("Dust"): orange smog haze over sepia paper with burnt-amber
+    and ink accents
+  - Header shows a city skyline silhouette with lit windows against a glowing
+    horizon, a flickering vertical katakana "bus stop" neon sign, and a wide,
+    letter-spaced title
+  - Michroma display type, Saira body text, and Share Tech Mono for labels,
+    times, and readouts; route numbers render as illuminated signs
+  - Hairline smoked-glass panels with a lit top edge and indicator lamp
+  - Map tiles are recolored to match the theme, and bus, stop, cluster, and
+    location markers use theme tokens instead of hard-coded blue
+  - Rain, flicker, and blink animations stop under `prefers-reduced-motion`
 
 ### Added
 - **Demo Mode**: Explore the entire app with realistic sample data — no TheBus
