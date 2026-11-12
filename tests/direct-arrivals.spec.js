@@ -13,9 +13,9 @@ for (const timezoneId of ['Pacific/Honolulu', 'America/New_York', 'Asia/Tokyo'])
     test('normalizes XML and calculates midnight waits independent of viewer timezone', async ({ page }) => {
       await page.clock.setFixedTime(new Date('2026-09-06T09:55:00Z'));
       await start(page, xml());
-      await page.check('#usePublicProxy');
+      await page.fill('#proxyTemplate', 'https://proxy.example/?url={url}');
       const proxies = [];
-      page.on('request', req => { if (req.url().includes('corsproxy.io')) proxies.push(req.url()); });
+      page.on('request', req => { if (req.url().includes('proxy.example')) proxies.push(req.url()); });
       await page.fill('#stopNumber', '45');
       await page.click('#arrivalsForm button[type="submit"]');
       await expect(page.locator('#arrivalsResults')).toContainText('10 min');
@@ -84,6 +84,6 @@ test('vehicle lookup without a proxy explains required setup without making a re
   page.on('request', req => { if (req.url().includes('api.thebus.org')) requests.push(req.url()); });
   await page.fill('#vehicleNumber', '249');
   await page.click('#vehicleForm button[type="submit"]');
-  await expect(page.locator('#vehicleResults')).toContainText('Vehicle lookup requires a trusted proxy');
+  await expect(page.locator('#vehicleResults')).toContainText('Vehicle lookup requires a proxy you trust');
   expect(requests).toHaveLength(0);
 });

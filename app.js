@@ -114,7 +114,6 @@ const toggleKeyVisibilityBtn = document.getElementById("toggleKeyVisibility");
 const clearKeyBtn = document.getElementById("clearKey");
 const keyHelpText = document.getElementById("key-help");
 const proxyTemplateInput = document.getElementById("proxyTemplate");
-const usePublicProxyCheckbox = document.getElementById("usePublicProxy");
 const saveRouteFavoriteBtn = document.getElementById("saveRouteFavorite");
 const saveStopFavoriteBtn = document.getElementById("saveStopFavorite");
 const towardDestinationForm = document.getElementById("towardDestinationForm");
@@ -126,8 +125,8 @@ const ARRIVALS_CACHE_TTL_MS = 30000;
 const storageKey = "thebus-api-key";
 const rememberKeyStorageKey = "thebus-remember-key";
 const proxyTemplateStorageKey = "thebus-proxy-template";
-const usePublicProxyStorageKey = "thebus-use-public-proxy";
-const publicProxyTemplate = "https://corsproxy.io/?url={url}";
+// Legacy flag for the removed corsproxy.io option; cleared on load.
+const legacyPublicProxyStorageKey = "thebus-use-public-proxy";
 const savedCommutesStorageKey = "findabus-saved-commutes";
 
 /* -------------------------------------------------------------------------
@@ -485,19 +484,8 @@ function setRememberPreference(remember) {
   }
 }
 
-function isPublicProxyEnabled() {
-  try {
-    return window.localStorage.getItem(usePublicProxyStorageKey) === "true";
-  } catch (error) {
-    return false;
-  }
-}
-
 function getProxyTemplate() {
   try {
-    if (isPublicProxyEnabled()) {
-      return publicProxyTemplate;
-    }
     return window.localStorage.getItem(proxyTemplateStorageKey) || "";
   } catch (error) {
     return "";
@@ -548,16 +536,16 @@ if (apiKeyInput) {
     rememberKeyCheckbox.checked = remember;
   }
 
-  if (usePublicProxyCheckbox) {
-    const publicProxyEnabled = isPublicProxyEnabled();
-    usePublicProxyCheckbox.checked = publicProxyEnabled;
-    if (proxyTemplateInput) {
-      proxyTemplateInput.disabled = publicProxyEnabled;
-    }
+  // corsproxy.io now requires its own key and registered domain, so the
+  // built-in public option was removed. Drop its saved flag.
+  try {
+    window.localStorage.removeItem(legacyPublicProxyStorageKey);
+  } catch (error) {
+    // Silently fail if localStorage is disabled
   }
 
   if (proxyTemplateInput) {
-    proxyTemplateInput.value = isPublicProxyEnabled() ? "" : (window.localStorage.getItem(proxyTemplateStorageKey) || "");
+    proxyTemplateInput.value = getProxyTemplate();
   }
 
   // Load saved key if it exists
@@ -638,29 +626,6 @@ if (apiKeyInput) {
         }
       } catch (error) {
         // Silently fail if localStorage is disabled
-      }
-    });
-  }
-
-  if (usePublicProxyCheckbox) {
-    usePublicProxyCheckbox.addEventListener("change", (event) => {
-      const enabled = event.target.checked;
-      try {
-        if (enabled) {
-          window.localStorage.setItem(usePublicProxyStorageKey, "true");
-        } else {
-          window.localStorage.removeItem(usePublicProxyStorageKey);
-        }
-      } catch (error) {
-        // Silently fail if localStorage is disabled
-      }
-      if (proxyTemplateInput) {
-        proxyTemplateInput.disabled = enabled;
-        if (enabled) {
-          proxyTemplateInput.value = "";
-        } else {
-          proxyTemplateInput.value = window.localStorage.getItem(proxyTemplateStorageKey) || "";
-        }
       }
     });
   }
@@ -2320,7 +2285,7 @@ function buildTripDetailsSummary(tripId, tripInfo) {
 // uses the configured proxy; do not fall back to third parties silently.
 const API_REQUEST_TIMEOUT_MS = 20000;
 
-function apiRequestError(path, viaProxy, kind, status = null, publicProxy = false) {
+function apiRequestError(path, viaProxy, kind, status = null) {
   const transport = viaProxy ? 'configured proxy' : 'TheBus API directly';
   const prefix = `${path} via ${transport}`;
   let detail;
@@ -2334,9 +2299,10 @@ function apiRequestError(path, viaProxy, kind, status = null, publicProxy = fals
     detail = viaProxy
       ? 'Authentication was rejected by the proxy or TheBus upstream; this status alone does not identify which one.'
       : 'TheBus rejected authentication. Check that your TheBus key is valid.';
-    if (publicProxy) detail += ' corsproxy.io requires its own API key and allowed production domain. TheBus credentials do not authenticate the proxy. Use an authenticated custom template or your own proxy.';
   } else if (status === 403) {
-    detail = 'Access was denied. Check provider permissions and, if using a proxy, its domain and plan restrictions.';
+    detail = viaProxy
+      ? 'Access was denied by the proxy or TheBus upstream. If you run fab-proxy, check that this page\'s origin is in its ALLOWED_ORIGINS.'
+      : 'Access was denied. Check provider permissions.';
   } else if (status === 429) {
     detail = 'The service is rate-limiting requests. Wait before retrying.';
   } else if (kind === 'http') {
@@ -2366,14 +2332,13 @@ async function fetchFromApi(path, params = {}) {
   const template = getProxyTemplate().trim();
   const viaProxy = path === '/vehicle/' && Boolean(template);
   if (path === '/vehicle/' && !viaProxy) {
-    throw new Error('Vehicle lookup requires a trusted proxy. Configure one in Advanced API settings. Routes and arrivals work directly without a proxy.');
+    throw new Error('Vehicle lookup requires a proxy you trust, because TheBus serves vehicle data without CORS headers. Deploy the bundled fab-proxy worker (see proxy/README.md) and enter its URL in Advanced API settings. Routes and arrivals work directly without a proxy.');
   }
   const xmlRoot = { '/arrivals/': 'stopTimes', '/vehicle/': 'vehicles' }[path];
   if (viaProxy && !isValidProxyTemplate(template)) {
     throw new Error('Proxy template must include {url} or {url_raw}.');
   }
-  const publicProxy = viaProxy && isPublicProxyEnabled();
-  const fail = (kind, status) => apiRequestError(path, viaProxy, kind, status, publicProxy);
+  const fail = (kind, status) => apiRequestError(path, viaProxy, kind, status);
   const url = new URL(path, apiBase);
   url.search = new URLSearchParams({ key: apiKey, ...Object.fromEntries(
     Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')

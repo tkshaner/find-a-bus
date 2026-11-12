@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 async function setup(page, proxy = true) {
   await page.goto('/');
   await page.fill('#apiKey', 'test-key-private-12345');
-  if (proxy) await page.check('#usePublicProxy');
+  if (proxy) await page.fill('#proxyTemplate', 'https://proxy.example/?url={url}');
 }
 
 const lookups = [
@@ -18,7 +18,7 @@ for (const lookup of lookups) {
     let direct = 0;
     const requests = [];
     await page.route('https://api.thebus.org/**', route => { direct++; requests.push(route.request()); return route.fulfill({ status: 401, body: 'Unauthorized' }); });
-    await page.route('https://corsproxy.io/**', route => {
+    await page.route('https://proxy.example/**', route => {
       requests.push(route.request());
       return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Invalid key test-key-private-12345', status: 401 } }) });
     });
@@ -29,7 +29,7 @@ for (const lookup of lookups) {
     const result = page.locator(lookup.result);
     await expect(result).toContainText('HTTP 401');
     await expect(result).toContainText(lookup.endpoint);
-    await expect(result).toContainText(lookup.name === 'vehicle' ? 'corsproxy.io requires its own API key' : 'TheBus rejected authentication');
+    await expect(result).toContainText(lookup.name === 'vehicle' ? 'rejected by the proxy or TheBus upstream' : 'TheBus rejected authentication');
     await expect(result).not.toContainText('test-key-private-12345');
     expect(direct).toBe(lookup.name === 'vehicle' ? 0 : 1);
     expect(requests).toHaveLength(1);
@@ -51,7 +51,7 @@ test('direct 401 remains an authentication failure', async ({ page }) => {
 
 for (const status of [403, 429, 502]) {
   test(`vehicle preserves HTTP ${status}`, async ({ page }) => {
-    await page.route('https://corsproxy.io/**', route => route.fulfill({ status, body: 'Error' }));
+    await page.route('https://proxy.example/**', route => route.fulfill({ status, body: 'Error' }));
     await setup(page);
     await page.fill('#vehicleNumber', '249');
     await page.click('#vehicleForm button[type="submit"]');
@@ -69,13 +69,36 @@ test('network failure is distinguished from HTTP failure', async ({ page }) => {
 
 for (const body of ['<html>Login page</html>', '<unexpected/>', '<vehicles><vehicle>']) {
   test(`rejects unexpected vehicle response ${body}`, async ({ page }) => {
-    await page.route('https://corsproxy.io/**', route => route.fulfill({ status: 200, body }));
+    await page.route('https://proxy.example/**', route => route.fulfill({ status: 200, body }));
     await setup(page);
     await page.fill('#vehicleNumber', '249');
     await page.click('#vehicleForm button[type="submit"]');
     await expect(page.locator('#vehicleResults')).toContainText('unexpected response format');
   });
 }
+
+test('vehicle lookup without a proxy explains how to set one up', async ({ page }) => {
+  let calls = 0;
+  await page.route('https://api.thebus.org/**', route => { calls++; return route.abort(); });
+  await setup(page, false);
+  await page.fill('#vehicleNumber', '249');
+  await page.click('#vehicleForm button[type="submit"]');
+  await expect(page.locator('#vehicleResults')).toContainText('fab-proxy');
+  expect(calls).toBe(0);
+});
+
+test('legacy public proxy setting is cleared and never contacts corsproxy.io', async ({ page }) => {
+  const contacted = [];
+  page.on('request', req => { if (req.url().includes('corsproxy.io')) contacted.push(req.url()); });
+  await page.addInitScript(() => window.localStorage.setItem('thebus-use-public-proxy', 'true'));
+  await setup(page, false);
+  await expect(page.locator('#usePublicProxy')).toHaveCount(0);
+  expect(await page.evaluate(() => window.localStorage.getItem('thebus-use-public-proxy'))).toBeNull();
+  await page.fill('#vehicleNumber', '249');
+  await page.click('#vehicleForm button[type="submit"]');
+  await expect(page.locator('#vehicleResults')).toContainText('requires a proxy');
+  expect(contacted).toHaveLength(0);
+});
 
 test('configured custom proxy is used on localhost and accepts empty XML vehicle data', async ({ page }) => {
   let calls = 0;
